@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+/* Estilos estructurales básicos y fuente */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6; /* Fondo gris claro */
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Alineado al inicio para evitar que el contenido se estire demasiado */
+    padding-bottom: 80px; /* Espacio para la barra inferior */
+}
+#app-container {
+    width: 100%;
+    max-width: 480px; /* Ancho máximo para simular un dispositivo móvil/TPV */
+    background-color: #ffffff;
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    min-height: calc(100vh - 80px); /* Ajuste para el espacio del footer */
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: 0; 
+}
+/* Estilos para desktop */
+@media (min-width: 768px) {
+    #app-container {
+        max-width: 600px;
+        min-height: 80vh;
+        margin-top: 40px;
+    }
+}
+/* Estilo del botón de la barra inferior */
+.btn-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    padding: 8px 4px;
+    transition: all 0.2s;
+    cursor: pointer;
+    color: #4b5563; /* Gris oscuro */
+}
+.btn-action.active {
+    color: #1d4ed8; /* Azul principal */
+    font-weight: 600;
+    border-top: 2px solid #1d4ed8;
+}
+.btn-action:hover:not(.active) {
+    background-color: #f9fafb;
+}
+
+/* Estilos para la calculadora/teclado */
+/* Nota: Las clases de Tailwind están en el HTML para evitar el uso de @apply sin preprocesador */
+.keypad-button {
+    /* p-4 m-1 text-2xl font-semibold bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition duration-150 */
+}
+
+/* Estilo específico para los botones de operador en Recargas */
+.operator-button {
+    /* w-full p-2 text-center text-sm font-semibold text-gray-800 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-blue-50 transition flex flex-col items-center justify-center */
+    min-height: 90px;
+}

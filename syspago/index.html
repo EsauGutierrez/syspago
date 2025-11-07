@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPV Móvil | Punto de Venta</title>
+    <!-- Carga de Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Enlace a estilos personalizados -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Iconos de Lucide: se usarán como SVG inline -->
+</head>
+
+<body>
+    <div id="app-container">
+
+        <!-- HEADER: título y logo dinámico -->
+        <header id="app-header" class="bg-white border-b shadow-sm p-3">
+            <!-- contenido dinámico generado por app.js -->
+        </header>
+
+        <!-- MAIN CONTENT (Vistas Intercambiables) -->
+        <main id="main-content" class="flex-grow p-4 overflow-y-auto">
+            <!-- La vista activa se inyectará aquí -->
+
+            <!-- NUEVA SECCIÓN: MENÚ DE SERVICIOS -->
+            <section id="services-menu" class="mt-6">
+                <h2 class="text-xl font-bold flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    Servicios
+                </h2>
+                <ul class="mt-4 space-y-2">
+                    <li class="text-gray-700">Agua y drenaje</li>
+                    <li class="text-gray-700">Catálogos</li>
+                    <li class="text-gray-700">Gas y electricidad</li>
+                    <li class="text-gray-700">Gobiernos</li>
+                    <li class="text-gray-700">Lotería</li>
+                    <li class="text-gray-700">Movilidad</li>
+                    <li class="text-gray-700">Servicios digitales</li>
+                    <li class="text-gray-700">TV e internet</li>
+                </ul>
+            </section>
+            <!-- FIN DE LA SECCIÓN DE SERVICIOS -->
+
+        </main>
+
+        <!-- MODAL DE COMISIÓN -->
+        <div id="commission-modal"
+            class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Aplicar Comisión</h2>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Tipo de Comisión:</label>
+                    <div class="mt-1 flex space-x-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="commissionType" value="percentage" checked
+                                data-action="toggle-commission" class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Porcentaje (%)</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="commissionType" value="fixed" data-action="toggle-commission"
+                                class="form-radio text-blue-600 rounded-full">
+                            <span class="ml-2 text-gray-700">Importe Fijo ($)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="commission-percentage-group">
+                    <label for="commission-percentage" class="block text-sm font-medium text-gray-700">Porcentaje
+                        (%)</label>
+                    <input type="number" id="commission-percentage" min="0" max="100" value="0" placeholder="Ej: 5"
+                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                </div>
+
+                <div id="commission-fixed-group" class="hidden">
+                    <label for="commission-fixed" class="block text-sm font-medium text-gray-700">Importe Fijo
+                        ($)</label>
+                    <input type="number" id="commission-fixed" min="0" value="0" placeholder="Ej: 10.50"
+                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                </div>
+
+                <div id="commission-result" class="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+                    Comisión Calculada: <span id="modal-commission-amount" class="font-bold">$0.00</span>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button data-action="close-commission-modal"
+                        class="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition">Cancelar</button>
+                    <button data-action="apply-commission"
+                        class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition">Aplicar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION BAR (Footer Fijo) -->
+        <footer id="bottom-bar" class="fixed bottom-0 left-0 right-0 w-full bg-white border-t shadow-lg z-20">
+            <div class="flex justify-around items-center h-16">
+                <!-- 1. Recargas (topup) -->
+                <button class="btn-action" data-view="topup" data-action="change-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                        <path d="M12 7v8" />
+                        <path d="M10 10l2-3l2 3" />
+                    </svg>
+                    <span class="text-xs mt-1">Recargas</span>
+                </button>
+
+                <!-- 2. Servicios (payment) -->
+                <button class="btn-action" data-view="payment" data-action="change-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                        <line x1="16" y1="16" x2="16" y2="16" />
+                        <line x1="8" y1="16" x2="8" y1="16" />
+                    </svg>
+                    <span class="text-xs mt-1">Servicios</span>
+                </button>
+
+                <!-- 3. Syspago (checkout para simular una función de pago/cobro directo) -->
+                <button class="btn-action" data-view="checkout" data-action="change-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    <span class="text-xs mt-1">Syspago</span>
+                </button>
+
+                <!-- 4. Movim (Nueva vista, usando un icono de historial) -->
+                <button class="btn-action" data-view="movements" data-action="change-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                    <span class="text-xs mt-1">Movim</span>
+                </button>
+
+                <!-- 5. PV Venta (PV venta / Carrito de compras - activa por defecto) -->
+                <button class="btn-action active" data-view="cart" data-action="change-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="8" cy="21" r="1" />
+                        <circle cx="19" cy="21" r="1" />
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.38a2 2 0 0 0 1.84-1.9L21.7 6H5.16" />
+                    </svg>
+                    <span class="text-xs mt-1">PV Venta</span>
+                </button>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Enlace a JavaScript (¡Importante: type="module"!) -->
+    <script type="module" src="js/app.js"></script>
+    <script>
+        // Este script escucha los clics en la barra inferior (Footer)
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomBar = document.getElementById('bottom-bar');
+            if (bottomBar) {
+                bottomBar.addEventListener('click', (event) => {
+                    const button = event.target.closest('[data-action="change-view"]');
+                    if (button) {
+                        const viewName = button.getAttribute('data-view');
+                        // Llama a la función changeView que está en el ámbito global (window) del módulo js/app.js
+                        if (window.changeView) {
+                            window.changeView(viewName);
+                        }
+                    }
+                });
+            }
+
+            // También adjuntamos listeners para el modal de comisión (ejemplo)
+            document.querySelector('[data-action="close-commission-modal"]')?.addEventListener('click', window.closeCommissionModal);
+            document.querySelector('[data-action="apply-commission"]')?.addEventListener('click', window.applyCommission);
+            document.querySelectorAll('[data-action="toggle-commission"]').forEach(radio => {
+                radio.addEventListener('change', (e) => window.toggleCommissionInput(e.target.value));
+            });
+
+            // Listener de teclado (para el modal, si es necesario, se puede mover al JS)
+            document.getElementById('commission-percentage')?.addEventListener('input', window.updateModalCommissionAmount);
+            document.getElementById('commission-fixed')?.addEventListener('input', window.updateModalCommissionAmount);
+        });
+    </script>
+</body>
+
+</html>
