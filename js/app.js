@@ -2668,6 +2668,8 @@ window.openCashPaymentView = function (options = {}) {
     }
 };
 
+
+
 window.finalizePayment = window.finalizePayment || function (method, total, received) {
     try {
         // normalizar valores
