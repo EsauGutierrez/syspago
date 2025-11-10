@@ -2945,3 +2945,97 @@ window.showSyspagoMenu = function () {
 // Opcional: activar automáticamente al inicio (descomenta si quieres que sea la vista por defecto)
 state.currentView = 'syspago-menu';
 window.showSyspagoMenu();
+
+
+
+// === SPLASH / PANTALLA INICIAL (PV Cloud / SyStienda) ===
+// Pegar al final de js/app.js (fuera de otras funciones)
+
+window.showInitialSplash = function () {
+    try {
+        if (document.getElementById('syspago-splash')) return;
+        const splash = document.createElement('div');
+        splash.id = 'syspago-splash';
+        splash.className = 'syspago-splash';
+        splash.innerHTML = `
+            <div class="tiles" role="navigation" aria-label="Seleccionar App">
+                <div class="tile" id="splash-pvcloud" title="PV Cloud">
+                    <img class="icon" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 200 200'><rect x='18' y='36' width='164' height='128' rx='12' fill='%23ffffff' stroke='%232b6cb0' stroke-width='6'/><path d='M62 86h76M62 118h42' stroke='%232b6cb0' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>" alt="PV Cloud" />
+                    <div class="label">PV Cloud</div>
+                </div>
+                <div class="tile" id="splash-systienda" title="SyStienda">
+                    <img class="icon" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 200 200'><rect x='18' y='36' width='164' height='128' rx='12' fill='%23ffffff' stroke='%23c026d3' stroke-width='6'/><path d='M56 104h88' stroke='%23c026d3' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>" alt="SyStienda" />
+                    <div class="label">SyStienda</div>
+                </div>
+            </div>
+
+            <div class="logo" aria-hidden="true">
+                <!-- Logo grande: si prefieres usar una imagen real reemplaza por <img src="ruta/logo.png"> -->
+                <svg width="220" height="80" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <g fill="none" fill-rule="evenodd">
+                        <text x="0" y="43" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" fill="#ef4444">SYS</text>
+                        <text x="78" y="43" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" fill="#1e40af">pago</text>
+                    </g>
+                </svg>
+            </div>
+        `;
+        document.body.appendChild(splash);
+
+        // Handlers
+        const pvBtn = document.getElementById('splash-pvcloud');
+        const stBtn = document.getElementById('splash-systienda');
+
+        function hideAndNavigate(toView) {
+            try {
+                window.hideInitialSplash();
+                // guardar en estado (opcional)
+                window.state = window.state || {};
+                window.state.selectedApp = toView;
+                // Navegar a la vista solicitada; si no existe changeView, usamos renderApp y forzamos cart
+                if (typeof window.changeView === 'function') {
+                    window.changeView(toView);
+                } else {
+                    if (toView === 'cart') {
+                        window.state.currentView = 'cart';
+                    } else if (toView === 'topup') {
+                        window.state.currentView = 'topup';
+                    }
+                    if (typeof window.renderApp === 'function') window.renderApp();
+                }
+            } catch (e) {
+                console.error('hideAndNavigate error', e);
+            }
+        }
+
+        if (pvBtn) pvBtn.addEventListener('click', () => hideAndNavigate('cart'));
+        if (stBtn) stBtn.addEventListener('click', () => hideAndNavigate('topup'));
+
+        // Prevent keyboard scroll on splash (mobile)
+        splash.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    } catch (err) {
+        console.error('showInitialSplash error', err);
+    }
+};
+
+window.hideInitialSplash = function () {
+    try {
+        const el = document.getElementById('syspago-splash');
+        if (el) el.remove();
+    } catch (err) {
+        console.error('hideInitialSplash error', err);
+    }
+};
+
+// Mostrar splash automáticamente al inicio (antes de interacción)
+try {
+    // si DOM ya listo, mostrar ahora; si no, hacerlo en DOMContentLoaded
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        window.showInitialSplash && window.showInitialSplash();
+    } else {
+        window.addEventListener('DOMContentLoaded', () => {
+            window.showInitialSplash && window.showInitialSplash();
+        });
+    }
+} catch (e) {
+    console.error('init splash error', e);
+}
