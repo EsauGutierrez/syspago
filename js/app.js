@@ -1629,7 +1629,7 @@ function renderSettingsView() {
 window.renderApp = function () {
     // render header en todas las vistas
     window.renderHeader && window.renderHeader();
-
+ 
     switch (state.currentView) {
         case 'topup': renderTopupView(); break;
         case 'topup-plans': renderTopupPlansView(); break;
