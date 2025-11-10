@@ -3015,6 +3015,7 @@ window.showInitialSplash = function () {
     } catch (err) {
         console.error('showInitialSplash error', err);
     }
+    
 };
 
 window.hideInitialSplash = function () {
