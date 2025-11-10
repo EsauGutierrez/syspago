@@ -130,6 +130,8 @@ body {
     justify-content: center;
 }
 
+
+
 @media (max-width: 480px) {
     .syspago-splash .tiles { gap: 12px; }
     .syspago-splash .tile { width: 92px; height: 92px; }

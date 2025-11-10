@@ -3007,6 +3007,8 @@ window.showInitialSplash = function () {
             }
         }
 
+        
+
         if (pvBtn) pvBtn.addEventListener('click', () => hideAndNavigate('cart'));
         if (stBtn) stBtn.addEventListener('click', () => hideAndNavigate('topup'));
 
@@ -3015,7 +3017,7 @@ window.showInitialSplash = function () {
     } catch (err) {
         console.error('showInitialSplash error', err);
     }
-    
+
 };
 
 window.hideInitialSplash = function () {
