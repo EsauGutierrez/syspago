@@ -82,6 +82,7 @@ const state = {
     topupSelectedOperator: null, // operador seleccionado
     topupSelectedPlan: null,     // plan seleccionado (se mostrará en confirmación)
     selectedService: null,       // servicio seleccionado en el menú de Servicios
+    activeCartTab: 'quick',
 
     // --- Datos de ejemplo para Movimientos (puedes ajustar/añadir) ---
     movements: [
@@ -181,10 +182,33 @@ const serviceProviders = {
         { name: "Sky", code: "SKY" },
         { name: "Axtel", code: "AXTEL" }
     ]
-    
+
 
     // agrega otras listas según necesites
 };
+
+// ----------------------
+// Productos de ejemplo (Punto de Venta)
+// ----------------------
+const sampleProducts = [
+    { id: 'p1', name: 'COCA COLA 600 ML', price: 19.14, code: '75007614' },
+    { id: 'p2', name: 'MARIAS', price: 15.45, code: '7501000658923' },
+    { id: 'p3', name: 'PAPAS ORIGINAL 45G-BSA SABRITAS', price: 18.07, code: '7501011101456' },
+    { id: 'p4', name: 'NITO BIMBO 62G', price: 15.43, code: '7501000112784' },
+    { id: 'p5', name: 'RUFFLES QUESO 50 GR', price: 18.14, code: '7501011104099' },
+    { id: 'p6', name: 'COCA COLA 500 ML', price: 16.36, code: '75009809' },
+    { id: 'p7', name: 'LECHE LALA ENTERA 1 LT', price: 28.10, code: '7501020526066' },
+    { id: 'p8', name: 'NUTRILECHE 1 LT', price: 21.62, code: '7501020540666' }
+];
+
+
+// Función para cambiar pestaña (si ya existe, puedes sustituirla)
+window.setCartTab = function (tab) {
+    if (!['quick', 'search', 'generic'].includes(tab)) return;
+    state.activeCartTab = tab;
+    window.renderApp && window.renderApp();
+}
+
 
 function getProvidersForService(serviceName) {
     return serviceProviders[serviceName] ? [...serviceProviders[serviceName]] : [];
@@ -282,8 +306,9 @@ function addItemToCart(name, price, quantity = 1) {
 
     calculateTotals();
     window.renderApp();
-    window.showToast(`${name} agregado al carrito.`);
+    window.showToast(`'${name}' added to cart`, 'success', 2500);
 }
+window.addItemToCart = addItemToCart;
 
 function updateItemQuantity(itemId, newQuantity) {
     const item = state.cart.find(i => i.id === itemId);
@@ -443,6 +468,237 @@ window.processPayment = function (method) {
     );
 }
 
+window.setCartTab = function (tab) {
+    if (!['quick', 'search', 'generic'].includes(tab)) return;
+    state.activeCartTab = tab;
+    window.renderApp && window.renderApp();
+}
+
+
+// ----------------- NUEVA FUNCIÓN: Toast de notificación -----------------
+// Pegar esta función en js/app.js en la sección de utilidades globales (fuera de otras funciones)
+window.showToast = function (message, type = 'success', timeout = 3000) {
+    try {
+        // eliminar toast existente si hay
+        const existing = document.getElementById('syspago-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'syspago-toast';
+        // contenedor posicionado top-center
+        toast.style.position = 'fixed';
+        toast.style.left = '50%';
+        toast.style.top = '12px';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.zIndex = 9999;
+        toast.style.transition = 'opacity 260ms ease';
+        toast.style.opacity = '0';
+
+        // contenido (usando clases tailwind para apariencia si están cargadas)
+        const bgClass = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+        const title = type === 'success' ? 'Éxito' : 'Error';
+
+        // Creamos el contenido HTML (aseguramos texto escapado)
+        const safeMessage = String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        toast.innerHTML = `
+            <div class="${bgClass} text-white rounded-lg shadow-md px-4 py-3 flex items-center space-x-3" style="min-width:260px;">
+                <div style="flex-shrink:0;">
+                    ${type === 'success'
+                ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M20 6L9 17l-5-5"/></svg>'
+                : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>'
+            }
+                </div>
+                <div>
+                    <div style="font-weight:600;">${title}</div>
+                    <div style="font-size:0.9rem; margin-top:2px;">${safeMessage}</div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Animación de entrada
+        requestAnimationFrame(() => { toast.style.opacity = '1'; });
+
+        // Auto-cierre
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                try { toast.remove(); } catch (e) { }
+            }, 260);
+        }, timeout);
+    } catch (e) {
+        // si algo falla, no rompemos la app
+        console.error('showToast error', e);
+    }
+}
+
+// --- Render de una fila de producto (global) ---
+window.productRowHtml = window.productRowHtml || function (product) {
+    const priceStr = window.formatCurrency ? window.formatCurrency(product.price || 0) : ('$ ' + (product.price || 0));
+    const code = product.code || product.barcode || product.sku || '';
+    const safeName = String(product.name || '').replace(/'/g, "\\'");
+    const safePrice = Number(product.price || 0);
+    return `
+        <div class="flex items-center justify-between bg-white border-b last:border-b-0 px-4 py-4">
+            <div class="flex-1 pr-3">
+                <div class="text-base font-semibold text-gray-800">${(product.name || '').toUpperCase()}</div>
+                <div class="text-sm text-gray-600 mt-1">
+                    <span class="font-medium">${priceStr}</span> &nbsp;|&nbsp; <span class="text-xs text-gray-500">Código: ${code}</span>
+                </div>
+            </div>
+            <div class="flex-shrink-0">
+                <button onclick="window.addItemToCart && window.addItemToCart('${safeName}', ${safePrice}, 1)" class="w-12 h-12 flex items-center justify-center rounded border border-blue-300 bg-white hover:bg-blue-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6m5-6v6m4-6v6m-9 0h10" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    `;
+};
+
+// Búsqueda en tiempo real. Llama a window.searchProducts(q) con el texto.
+// Si q es vacío, muestra todos los productos del origen (state.products o state.sampleProducts).
+// Reemplaza/pega esta implementación de búsqueda (asegúrate de que esté antes de renderCartView)
+window.searchProducts = function (q) {
+    try {
+        // Mostrar en consola para depuración
+        console.log('[searchProducts] q=', q);
+
+        const termRaw = String(q || '');
+        const term = termRaw.toLowerCase().trim();
+
+        // Helper: normalizar texto (quita acentos y lower case)
+        const normalize = (s) => {
+            if (!s && s !== 0) return '';
+            try {
+                // usa Unicode normalization y quita marcas diacríticas
+                return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            } catch (e) {
+                return String(s).toLowerCase();
+            }
+        };
+
+        // Determinar fuente de productos (con prioridad): state.products > state.sampleProducts > state.catalog/state.items > fallback local
+        const fallback = [
+            { name: "COCA COLA COLA 600 ML", price: 19.14, code: "75007614" },
+            { name: "MARIAS", price: 15.45, code: "7501000658923" },
+            { name: "PAPAS ORIGINAL 45G BSA SABRITAS", price: 18.07, code: "7501011101456" },
+            { name: "NITO BIMBO 62G", price: 15.43, code: "7501000112784" },
+            { name: "RUFFLES QUESO 50 GR", price: 18.14, code: "7501011104099" },
+            { name: "COCA COLA COLA 500 ML", price: 16.36, code: "75009809" },
+            { name: "LECHE LALA ENTERA 1 LT", price: 28.10, code: "7501020526066" }
+        ];
+
+        const productsSource = (typeof state !== 'undefined' && state && Array.isArray(state.products) && state.products.length)
+            ? state.products
+            : (typeof state !== 'undefined' && state && Array.isArray(state.sampleProducts) && state.sampleProducts.length)
+                ? state.sampleProducts
+                : (typeof state !== 'undefined' && state && Array.isArray(state.catalog) && state.catalog.length)
+                    ? state.catalog
+                    : (typeof state !== 'undefined' && state && Array.isArray(state.items) && state.items.length)
+                        ? state.items
+                        : fallback;
+
+        // Debug logs para saber qué estamos usando y su tamaño
+        console.log('[searchProducts] productsSource.length =', productsSource.length);
+        console.log('[searchProducts] primeros items =', (productsSource || []).slice(0, 6).map(p => p.name || p.code || p.id));
+
+        const container = document.getElementById('product-search-results');
+        if (!container) {
+            console.warn('[searchProducts] no existe #product-search-results en el DOM');
+            return;
+        }
+
+        // Si el término está vacío, mostramos la lista completa
+        if (term === '') {
+            const htmlAll = (productsSource && productsSource.length)
+                ? `<div class="divide-y bg-gray-50 border rounded-b-lg overflow-hidden">` + productsSource.map(p => window.productRowHtml ? window.productRowHtml(p) : '').join('') + `</div>`
+                : `<div class="p-4 text-sm text-gray-500">No hay productos para mostrar.</div>`;
+            container.innerHTML = htmlAll;
+            return;
+        }
+
+        // Normalizar term para comparar
+        const normTerm = normalize(term);
+
+        // Filtrar: buscar en nombre y código normalizados
+        const filtered = (productsSource || []).filter(p => {
+            const name = normalize(p.name || '');
+            const code = normalize(p.code || p.barcode || p.sku || '');
+            return name.indexOf(normTerm) !== -1 || code.indexOf(normTerm) !== -1;
+        });
+
+        console.log('[searchProducts] filtered.length =', filtered.length, 'term=', normTerm);
+
+        if (!filtered || filtered.length === 0) {
+            container.innerHTML = `<div class="p-4 text-sm text-gray-500">No hay resultados.</div>`;
+            return;
+        }
+
+        const html = `<div class="divide-y bg-gray-50 border rounded-b-lg overflow-hidden">` + filtered.map(p => window.productRowHtml ? window.productRowHtml(p) : '').join('') + `</div>`;
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error('searchProducts error', err);
+    }
+};
+
+
+window.searchProducts = window.searchProducts || function (q) {
+    try {
+        const term = String(q || '').toLowerCase().trim();
+
+        // Determinar fuente: state.products > state.sampleProducts > state.catalog/state.items > fallback sample
+        const fallback = [
+            { name: "COCA COLA COLA 600 ML", price: 19.14, code: "75007614" },
+            { name: "MARIAS", price: 15.45, code: "7501000658923" },
+            { name: "PAPAS ORIGINAL 45G BSA SABRITAS", price: 18.07, code: "7501011101456" },
+            { name: "NITO BIMBO 62G", price: 15.43, code: "7501000112784" },
+            { name: "RUFFLES QUESO 50 GR", price: 18.14, code: "7501011104099" },
+            { name: "COCA COLA COLA 500 ML", price: 16.36, code: "75009809" },
+            { name: "LECHE LALA ENTERA 1 LT", price: 28.10, code: "7501020526066" }
+        ];
+
+        const productsSource = (state && state.products && state.products.length) ? state.products
+            : (state && state.sampleProducts && state.sampleProducts.length) ? state.sampleProducts
+                : (state && (state.catalog || state.items) && (state.catalog || state.items).length) ? (state.catalog || state.items)
+                    : fallback;
+
+        // Si no hay contenedor, salimos con warning
+        const container = document.getElementById('product-search-results');
+        if (!container) {
+            console.warn('searchProducts: no existe #product-search-results en el DOM');
+            return;
+        }
+
+        // Filtrar
+        const list = term === '' ? productsSource : productsSource.filter(p => {
+            const name = (p.name || '').toString().toLowerCase();
+            const code = (p.code || p.barcode || p.sku || '').toString().toLowerCase();
+            return name.includes(term) || code.includes(term);
+        });
+
+        // Render
+        if (!list || list.length === 0) {
+            container.innerHTML = `<div class="p-4 text-sm text-gray-500">No hay resultados.</div>`;
+            return;
+        }
+
+        const html = `<div class="divide-y bg-gray-50 border rounded-b-lg overflow-hidden">` + list.map(p => window.productRowHtml(p)).join('') + `</div>`;
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error('searchProducts error', e);
+    }
+};
+
+
+
+// ------------------------------------------------------------------------
+
 function saveTransaction(transactionData) {
     if (!db) return;
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
@@ -451,76 +707,231 @@ function saveTransaction(transactionData) {
         .catch(error => console.error("Error guardando transacción:", error));
 }
 
-// ====================================================================
-// RENDERS (uso de template literals, sin JSX)
-// ====================================================================
+// ------------------------------------------------------------------
+// RENDER: carrito / PV (modificado para mostrar botón AGREGAR PRODUCTO cuando está vacío)
+// ------------------------------------------------------------------
 function renderCartView() {
+    try {
+        const mainContent = document.getElementById('main-content');
+        if (!mainContent) {
+            console.warn('No existe #main-content en el DOM');
+            return;
+        }
+
+        const tabsHtml = `
+            <div class="bg-white rounded-t-lg shadow-sm border-b">
+                <div class="flex justify-between items-center px-3 py-2">
+                    <div class="flex space-x-2">
+                        <button onclick="setCartTab('quick')" class="px-4 py-2 text-sm font-medium ${state.activeCartTab === 'quick' ? 'text-gray-900' : 'text-gray-600'}">Venta Rápida</button>
+                        <button onclick="setCartTab('search')" class="px-4 py-2 text-sm font-medium ${state.activeCartTab === 'search' ? 'text-gray-900' : 'text-gray-600'}">Buscar Productos</button>
+                        <button onclick="setCartTab('generic')" class="px-4 py-2 text-sm font-medium ${state.activeCartTab === 'generic' ? 'text-gray-900' : 'text-gray-600'}">Producto genérico</button>
+                    </div>
+                    <div class="h-1 w-28 ${state.activeCartTab === 'quick' ? 'bg-blue-600' : state.activeCartTab === 'search' ? 'bg-blue-600' : state.activeCartTab === 'generic' ? 'bg-blue-600' : ''} rounded"></div>
+                </div>
+            </div>
+        `;
+
+        // sampleProducts por defecto si no existe state.sampleProducts
+        const sampleProducts = (state.sampleProducts && state.sampleProducts.length) ? state.sampleProducts : [
+            { name: "COCA COLA COLA 600 ML", price: 19.14, code: "75007614" },
+            { name: "MARIAS", price: 15.45, code: "7501000658923" },
+            { name: "PAPAS ORIGINAL 45G BSA SABRITAS", price: 18.07, code: "7501011101456" },
+            { name: "NITO BIMBO 62G", price: 15.43, code: "7501000112784" },
+            { name: "RUFFLES QUESO 50 GR", price: 18.14, code: "7501011104099" },
+            { name: "COCA COLA COLA 500 ML", price: 16.36, code: "75009809" },
+            { name: "LECHE LALA ENTERA 1 LT", price: 28.10, code: "7501020526066" }
+        ];
+
+        // determinar fuente de productos: primero state.products si existe, sino sampleProducts/fallback
+        const productsSource = (state.products && state.products.length) ? state.products
+            : (state.sampleProducts && state.sampleProducts.length) ? state.sampleProducts
+                : sampleProducts;
+
+        // función auxiliar: obtener HTML inicial de resultados (toda la lista)
+        const initialResultsHtml = (productsSource && productsSource.length)
+            ? `<div class="divide-y bg-gray-50 border rounded-b-lg overflow-hidden">` + productsSource.map(p => window.productRowHtml ? window.productRowHtml(p) : (function () {
+                const priceStr = window.formatCurrency ? window.formatCurrency(p.price || 0) : ('$ ' + (p.price || 0));
+                const code = p.code || p.barcode || p.sku || '';
+                const safeName = String(p.name || '').replace(/'/g, "\\'");
+                const safePrice = Number(p.price || 0);
+                return `
+                    <div class="flex items-center justify-between bg-white border-b last:border-b-0 px-4 py-4">
+                        <div class="flex-1 pr-3">
+                            <div class="text-base font-semibold text-gray-800">${(p.name || '').toUpperCase()}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <span class="font-medium">${priceStr}</span> &nbsp;|&nbsp; <span class="text-xs text-gray-500">Código: ${code}</span>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <button onclick="window.addItemToCart('${safeName}', ${safePrice}, 1)" class="w-12 h-12 flex items-center justify-center rounded border border-blue-300 bg-white hover:bg-blue-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6m5-6v6m4-6v6m-9 0h10" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            })()).join('') + `</div>`
+            : `<div class="p-6 text-center text-sm text-gray-500">No hay productos para mostrar.</div>`;
+
+        // Contenido para la pestaña Buscar: input con oninput para búsqueda en tiempo real
+        // Inserto los resultados iniciales dentro del contenedor para que se vean desde el primer render
+        const searchTabHtml = `
+            <div class="p-3 bg-white border rounded-b-lg">
+                <div class="flex items-center space-x-2 mb-3">
+                    <div class="relative flex-1">
+                        <input id="product-search-input" oninput="window.searchProducts(this.value)" type="text" placeholder="Introduzca texto aquí" class="w-full p-3 border rounded pl-10" />
+                        <svg class="w-5 h-5 absolute left-3 top-3 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
+                        </svg>
+                        <button onclick="(function(){ document.getElementById('product-search-input').value=''; window.searchProducts && window.searchProducts(''); })()" class="absolute right-2 top-2 text-gray-500">✕</button>
+                    </div>
+                    <button onclick="(function(){ const q=document.getElementById('product-search-input').value; window.searchProducts && window.searchProducts(q); })()" class="px-3 py-2 bg-blue-600 text-white rounded">Buscar</button>
+                </div>
+                <div id="product-search-results" class="">
+                    ${initialResultsHtml}
+                </div>
+            </div>
+        `;
+
+        // Pestaña Venta rápida: aquí puedes usar sampleProducts o state.sampleProducts
+        let quickTabHtml = '';
+        if (state.activeCartTab === 'quick') {
+            const listHtml = (sampleProducts && sampleProducts.length)
+                ? `<div class="divide-y bg-gray-50 border rounded-b-lg overflow-hidden">` + sampleProducts.map(p => window.productRowHtml ? window.productRowHtml(p) : '').join('') + `</div>`
+                : `<div class="p-6 text-center text-sm text-gray-500">No hay artículos rápidos configurados.</div>`;
+
+            quickTabHtml = `
+                <div class="p-4">
+                    <div class="mb-2">
+                        <h3 class="text-base font-semibold text-gray-800">PV Venta | Carrito (${(state.cart || []).length} artículos)</h3>
+                    </div>
+                    ${listHtml}
+                </div>
+            `;
+        }
+
+        // Producto genérico (sin cambios)
+        const genericTabHtml = `
+            <div class="p-4 bg-gray-50 rounded-b-lg">
+                <div class="space-y-3">
+                    <input id="generic-name" type="text" placeholder="Nombre del producto" class="w-full p-3 border rounded" />
+                    <input id="generic-price" type="number" step="0.01" placeholder="Precio" class="w-full p-3 border rounded" />
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="(function(){ document.getElementById('generic-name').value=''; document.getElementById('generic-price').value=''; })()" class="px-4 py-2 bg-gray-200 rounded">Limpiar</button>
+                        <button onclick="(function(){ const n=document.getElementById('generic-name').value; const p=parseFloat(document.getElementById('generic-price').value)||0; if(n && p>0){ window.addItemToCart(n,p,1); document.getElementById('generic-name').value=''; document.getElementById('generic-price').value=''; } })()" class="px-4 py-2 bg-blue-600 text-white rounded">Agregar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Seleccionar contenido por pestaña
+        let tabContent = '';
+        if (state.activeCartTab === 'quick') tabContent = quickTabHtml;
+        else if (state.activeCartTab === 'search') tabContent = searchTabHtml;
+        else if (state.activeCartTab === 'generic') tabContent = genericTabHtml;
+
+        // Composición final de la vista
+        const cartHtml = `
+            <div class="h-full flex flex-col">
+                ${tabsHtml}
+                <div class="flex-1 overflow-y-auto px-0 py-3">
+                    <div class="max-w-full mx-auto px-2">
+
+                        ${tabContent}
+
+                    </div>
+                </div>
+            </div>
+        `;
+
+        mainContent.innerHTML = cartHtml;
+
+        // Nota: window.searchProducts debe existir y actualizar #product-search-results.
+        // Si no existe, puedes pegar la implementación que te di antes; si existe, al escribir en el input
+        // llamará a window.searchProducts(this.value) y actualizará el contenedor.
+        // No es necesario llamar window.searchProducts('') aquí porque ya inyectamos initialResultsHtml.
+
+    } catch (e) {
+        console.error('Error en renderCartView:', e);
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+            mainContent.innerHTML = '<div class="p-4 text-red-600">Ocurrió un error al renderizar la vista. Revisa la consola para más detalles.</div>';
+        }
+    }
+}
+
+
+// ------------------------------------------------------------------
+// RENDER: Lista de productos (pestañas + listado) - vista que aparece al pulsar AGREGAR PRODUCTO
+// ------------------------------------------------------------------
+function renderProductsView() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    const cartItemsHtml = state.cart.length === 0
-        ? `<p class="text-center text-gray-500 py-6">El carrito está vacío. Agrega artículos con el teclado.</p>`
-        : state.cart.map(item => `
-            <div class="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border" data-id="${item.id}">
-                <div class="flex-grow">
-                    <p class="font-semibold text-gray-800">${item.name} x${item.quantity}</p>
-                    <p class="text-sm text-gray-600">Precio unitario: ${window.formatCurrency(item.price)}</p>
-                </div>
-                <div class="text-right">
-                    <p class="font-bold">${window.formatCurrency(item.price * item.quantity)}</p>
-                    <button data-action="remove-item" class="mt-2 text-sm text-red-600">Eliminar</button>
-                </div>
+    const productsHtml = sampleProducts.map(p => `
+        <div class="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+            <div>
+                <div class="font-medium text-gray-800">${p.name}</div>
+                <div class="text-sm text-gray-500">$ ${p.price.toFixed(2)} | Código: ${p.code}</div>
             </div>
-        `).join('');
+            <div class="flex items-center space-x-2">
+                <button data-action="add-product" data-product-id="${p.id}" class="p-2 rounded-md border text-blue-600 hover:bg-blue-50" title="Agregar al carrito">
+                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4"/><path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M7 13v7a2 2 0 002 2h6a2 2 0 002-2v-7"/></svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
 
-    const cartHtml = `
-        <div class="h-full flex flex-col">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">PV Venta | Carrito de Compras (${state.cart.length} Artículos)</h2>
-
-            <div id="cart-list" class="flex-grow space-y-3 p-2 bg-gray-50 rounded-lg overflow-y-auto mb-4 border">
-                ${cartItemsHtml}
+    const html = `
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold">Venta Rápida</h2>
+                <button data-action="back-to-cart" class="text-sm text-gray-500">Cerrar</button>
             </div>
 
-            <div class="p-3 bg-white border-t rounded-t-lg shadow-md flex justify-between items-center mt-2">
-                <div class="text-sm">
-                    <span class="text-gray-500">Subtotal:</span>
-                    <span id="display-subtotal" class="font-medium text-gray-700">${window.formatCurrency(state.subtotal)}</span>
-                </div>
-                <div class="text-2xl font-extrabold">
-                    <span class="text-gray-800">TOTAL:</span>
-                    <span id="display-total" class="text-green-600">${window.formatCurrency(state.total)}</span>
-                </div>
+            <div class="flex gap-3">
+                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white">Editar productos</button>
+                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white">Reordenar productos</button>
             </div>
 
-            <div class="p-4 bg-gray-100 rounded-lg shadow-inner mt-2">
-                <div class="flex items-center justify-between mb-3 p-3 bg-white rounded-lg border shadow-md">
-                    <span class="text-gray-500 text-sm">${state.quickEntryName}</span>
-                    <span class="text-3xl font-mono font-extrabold text-gray-900">${window.formatCurrency(state.quickEntryPrice)}</span>
+            <div class="mt-2 bg-white p-3 rounded-lg border">
+                <div class="flex items-center space-x-3 mb-3">
+                    <div class="p-2 bg-gray-100 rounded-full">🔍</div>
+                    <input id="product-search" type="text" placeholder="Buscar Productos" class="w-full p-2 border rounded" />
                 </div>
-                <div class="grid grid-cols-4 gap-2">
-                    <button class="keypad-button" data-key="7">7</button>
-                    <button class="keypad-button" data-key="8">8</button>
-                    <button class="keypad-button" data-key="9">9</button>
-                    <button class="keypad-button bg-red-400 text-white hover:bg-red-500" data-key="AC">AC</button>
 
-                    <button class="keypad-button" data-key="4">4</button>
-                    <button class="keypad-button" data-key="5">5</button>
-                    <button class="keypad-button" data-key="6">6</button>
-                    <button class="keypad-button bg-yellow-400 hover:bg-yellow-500" data-key="DEL">DEL</button>
-
-                    <button class="keypad-button" data-key="1">1</button>
-                    <button class="keypad-button" data-key="2">2</button>
-                    <button class="keypad-button" data-key="3">3</button>
-                    <button class="keypad-button bg-green-500 text-white hover:bg-green-600 row-span-2" data-action="add-quick-item">Agregar</button>
-
-                    <button class="keypad-button" data-key="0">0</button>
-                    <button class="keypad-button col-span-2" data-key=".">.</button>
+                <div id="product-list" class="space-y-2">
+                    ${productsHtml}
                 </div>
             </div>
         </div>
     `;
-    mainContent.innerHTML = cartHtml;
+    mainContent.innerHTML = html;
+
+    // Filtro simple
+    const search = document.getElementById('product-search');
+    const listEl = document.getElementById('product-list');
+    if (!search || !listEl) return;
+    search.addEventListener('input', (ev) => {
+        const q = (ev.target.value || '').trim().toLowerCase();
+        const filtered = sampleProducts.filter(p => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
+        listEl.innerHTML = filtered.map(p => `
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                <div>
+                    <div class="font-medium text-gray-800">${p.name}</div>
+                    <div class="text-sm text-gray-500">$ ${p.price.toFixed(2)} | Código: ${p.code}</div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button data-action="add-product" data-product-id="${p.id}" class="p-2 rounded-md border text-blue-600 hover:bg-blue-50" title="Agregar al carrito">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4"/><path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M7 13v7a2 2 0 002 2h6a2 2 0 002-2v-7"/></svg>
+                    </button>
+                </div>
+            </div>
+        `).join('') || `<p class="text-gray-500 text-center py-6">No hay coincidencias.</p>`;
+    });
 }
+
 
 function renderTopupView() {
     const mainContent = document.getElementById('main-content');
@@ -1125,11 +1536,12 @@ function getMenuTitle(viewName) {
         case 'checkout': return 'Cobrar';
         case 'movements': return 'Movimientos';
         case 'cart': return 'PV Venta';
+        case 'syspago-menu': return 'Syspago'; // <- nueva vista de menú
         default: return 'Syspago';
     }
 }
 // ------------------------------------------------------------------
-// HEADER DINÁMICO (logo + nombre del menú actual) con botón atrás
+// HEADER DINÁMICO (logo + nombre del menú actual) con botón atrás y ajustes
 // ------------------------------------------------------------------
 window.renderHeader = function () {
     const header = document.getElementById('app-header');
@@ -1148,17 +1560,72 @@ window.renderHeader = function () {
                 ${showBack ? `<button data-action="go-back" aria-label="Atrás" title="Atrás" class="absolute left-3 top-1/2 transform -translate-y-1/2 p-2 rounded-md text-gray-600 hover:bg-gray-100">
                     <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 </button>` : ''}
+
                 <div class="flex-shrink-0">${companyLogo}</div>
                 <div class="text-center">
                     <div class="text-xs text-gray-500">[Empresa]</div>
                     <div class="text-2xl font-semibold text-gray-800">${title}</div>
                 </div>
+
+                <!-- Botón Ajustes (tuerca) siempre visible a la derecha -->
+                <button data-action="open-settings" aria-label="Ajustes" title="Ajustes" class="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-md text-gray-600 hover:bg-gray-100">
+                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+                        <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09c.67 0 1.22-.42 1.51-1a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 0 1 7.8 3.8l.06.06c.5.5 1.2.68 1.82.33.48-.28 1.09-.44 1.69-.44H12a1.65 1.65 0 0 0 1.65-1.51V3a2 2 0 0 1 4 0v.09c0 .6.16 1.21.44 1.69.35.62.17 1.32-.33 1.82l-.06.06c-.6.6-.78 1.51-.33 1.82.29.29.84.5 1.51.5H21a2 2 0 0 1 0 4h-.09c-.67 0-1.22.21-1.51.5z"/>
+                    </svg>
+                </button>
             </div>
         </div>
     `;
 };
 
-// INCLUIR RENDER DEL HEADER ANTES DE CARGAR LA VISTA
+// Añadir la vista de Ajustes
+function renderSettingsView() {
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent) return;
+
+    const merchant = state.merchantName || 'DEMO MERCHANT';
+
+    const html = `
+        <div class="space-y-4">
+            <h2 class="text-xl font-bold mb-2">Ajustes</h2>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border">
+                <div class="flex items-center space-x-3 mb-3">
+                    <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1118.88 6.196 9 9 0 015.12 17.804z"/><path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="text-sm text-gray-500">Mi cuenta</div>
+                        <input id="merchant-name-input" class="w-full border p-2 rounded mt-1" value="${merchant}" />
+                    </div>
+                </div>
+
+                <div class="border-t mt-4 pt-4 space-y-3">
+                    <button data-action="open-consultar" class="w-full text-left p-3 rounded-lg border bg-white">Consultar</button>
+                    <button data-action="open-depositos" class="w-full text-left p-3 rounded-lg border bg-white">Depositos</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border">
+                <div class="text-lg font-semibold mb-3">¿Necesitas Ayuda?</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button data-action="contact-write" class="p-3 border rounded-lg text-center text-sm">ESCRÍBENOS<br><span class="block text-xs text-gray-500">55 4784 3689</span></button>
+                    <button data-action="contact-call" class="p-3 border rounded-lg text-center text-sm">LLÁMANOS<br><span class="block text-xs text-gray-500">55 4747 6290</span></button>
+                </div>
+
+                <div class="mt-4">
+                    <button data-action="sign-out" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">CERRAR SESIÓN</button>
+                </div>
+
+                <div class="text-center text-sm text-gray-500 mt-6">Version<br>3.17.15</div>
+            </div>
+        </div>
+    `;
+    mainContent.innerHTML = html;
+}
+
+// Asegúrate de que renderApp incluya la vista product-list
 window.renderApp = function () {
     // render header en todas las vistas
     window.renderHeader && window.renderHeader();
@@ -1168,11 +1635,13 @@ window.renderApp = function () {
         case 'topup-plans': renderTopupPlansView(); break;
         case 'topup-plan-confirm': renderTopupPlanConfirmView(); break;
         case 'topup-form': renderTopupFormView(); break;
-        case 'payment': renderPaymentView(); break;          // listado de servicios
-        case 'service-providers': renderServiceProvidersView(); break; // listado de proveedores por servicio
-        case 'payment-form': renderPaymentFormView(); break;  // formulario de servicio seleccionado
+        case 'payment': renderPaymentView(); break;
+        case 'service-providers': renderServiceProvidersView(); break;
+        case 'payment-form': renderPaymentFormView(); break;
+        case 'settings': renderSettingsView(); break;
         case 'checkout': renderCheckoutView(); break;
         case 'movements': renderMovementsView(); break;
+        case 'product-list': renderProductsView(); break;
         case 'cart':
         default: renderCartView(); break;
     }
@@ -1250,6 +1719,60 @@ function setupEventListeners() {
         if (view) { window.changeView(view); return; }
 
         switch (action) {
+
+
+            // abrir lista de productos (desde Carrito vacío)
+            case 'open-product-list': {
+                window.changeView('product-list');
+                break;
+            }
+
+            // cerrar listado y volver al carrito
+            case 'back-to-cart': {
+                window.changeView('cart');
+                break;
+            }
+
+            // añadir producto al carrito desde la lista
+            case 'add-product': {
+                const productId = target.getAttribute('data-product-id');
+                const product = sampleProducts.find(p => p.id === productId);
+                if (product) {
+                    addItemToCart(product.name, product.price, 1);
+                    // permanecer en la lista para seguir agregando; notificar
+                    window.showToast(`${product.name} agregado al carrito.`);
+                }
+                break;
+            }
+
+            case 'open-settings': {
+                // abrir pantalla de ajustes
+                window.changeView('settings');
+                break;
+            }
+
+            case 'sign-out': {
+                // Confirmar cierre de sesión
+                window.showMessageBox('Cerrar sesión', '¿Deseas cerrar sesión?', () => {
+                    // acción simple: volver al inicio y limpiar estado sensible si hace falta
+                    state.cart = [];
+                    state.selectedService = null;
+                    state.selectedProvider = null;
+                    calculateTotals();
+                    window.changeView('cart');
+                    window.showToast('Sesión cerrada.');
+                });
+                break;
+            }
+
+            case 'contact-write': {
+                window.showMessageBox('Contacto', 'Abrirías WhatsApp con: 55 4784 3689 (simulado).');
+                break;
+            }
+            case 'contact-call': {
+                window.showMessageBox('Contacto', 'Llamada a: 55 4747 6290 (simulado).');
+                break;
+            }
 
             case 'process-payment': {
                 const method = target.getAttribute('data-method') || 'Efectivo';
@@ -1451,3 +1974,972 @@ window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     window.initializeApp();
 });
+
+// ---------- PANEL / VISTA DETALLADA DEL CARRITO (pegar al final de js/app.js) ----------
+// Asegúrate de que estas funciones principales estén expuestas en window (si tu archivo se carga como module)
+if (typeof window.addItemToCart === 'undefined' && typeof addItemToCart === 'function') window.addItemToCart = addItemToCart;
+if (typeof window.updateItemQuantity === 'undefined' && typeof updateItemQuantity === 'function') window.updateItemQuantity = updateItemQuantity;
+if (typeof window.removeItem === 'undefined' && typeof removeItem === 'function') window.removeItem = removeItem;
+if (typeof window.calculateTotals === 'undefined' && typeof calculateTotals === 'function') window.calculateTotals = calculateTotals;
+if (typeof window.renderApp === 'undefined' && typeof renderApp === 'function') window.renderApp = renderApp;
+
+// Abrir panel de carrito (overlay)
+window.openCartDetail = function () {
+    // Cerrar si ya existe
+    const existing = document.getElementById('syspago-cart-detail');
+    if (existing) return;
+
+    // Construir overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'syspago-cart-detail';
+    overlay.style.position = 'fixed';
+    overlay.style.left = '0';
+    overlay.style.top = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.zIndex = '9998';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.background = 'rgba(0,0,0,0.3)';
+    overlay.innerHTML = `
+        <div class="w-full max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden" style="max-height:92vh; display:flex; flex-direction:column;">
+            <div class="flex items-center justify-between px-4 py-3 border-b">
+                <div class="text-lg font-semibold">Carrito</div>
+                <button id="syspago-cart-close" class="text-gray-600 hover:text-gray-900">Cerrar ✕</button>
+            </div>
+
+            <div id="syspago-cart-content" style="overflow:auto; flex:1;">
+
+                <!-- se inyecta aqui la lista -->
+
+            </div>
+
+            <div class="px-4 py-3 border-t bg-gray-50">
+                <div class="mb-3 grid grid-cols-2 gap-4 items-center">
+                    <div>
+                        <div class="text-sm text-gray-500">Sub Total</div>
+                        <div id="cart-subtotal" class="text-xl font-semibold text-gray-900">$0.00</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-500">Descuento</div>
+                        <div id="cart-discount" class="text-xl font-semibold text-gray-900">$0.00</div>
+                    </div>
+                    <div class="col-span-2 mt-2">
+                        <div class="text-sm text-gray-500">Total</div>
+                        <div id="cart-total" class="text-2xl font-extrabold text-green-600">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button id="cart-add-product" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded">AGREGAR PRODUCTO</button>
+                    <button id="cart-checkout" class="flex-1 px-4 py-2 bg-blue-700 text-white rounded">REALIZAR PAGO</button>
+                </div>
+
+                <div class="mt-3">
+                    <button id="cart-clear" class="w-full px-4 py-2 border rounded text-red-600">Borrar</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Event listeners
+    document.getElementById('syspago-cart-close').addEventListener('click', closeCartDetail);
+    document.getElementById('cart-add-product').addEventListener('click', () => {
+        // Cambiamos a la pestaña producto genérico para agregar (o abre modal según prefieras)
+        state.activeCartTab = 'generic';
+        window.renderApp && window.renderApp();
+        closeCartDetail();
+    });
+    document.getElementById('cart-checkout').addEventListener('click', () => {
+        // Cambia a la vista de cobro si la tienes implementada; fallback: mostrar alerta
+        if (typeof window.changeView === 'function') {
+            (function () {
+                const _origChangeView = window.changeView;
+                window.changeView = function (viewName, pushHistory = true) {
+                    // Mapear alias 'syspago' a la vista real 'syspago-menu'
+                    if (viewName === 'syspago') viewName = 'syspago-menu';
+                    return _origChangeView.call(this, viewName, pushHistory);
+                };
+            })();
+        } else {
+            window.showToast && window.showToast('Iniciando cobro...', 'success', 1500);
+        }
+        closeCartDetail();
+    });
+    document.getElementById('cart-clear').addEventListener('click', () => {
+        if (confirm('¿Deseas borrar todos los artículos del carrito?')) {
+            window.clearCart && window.clearCart();
+            renderCartDetail(); // actualizar panel
+        }
+    });
+
+    renderCartDetail();
+    // Animación simple de entrada
+    overlay.style.opacity = '0';
+    requestAnimationFrame(() => overlay.style.opacity = '1');
+};
+
+// Cerrar panel
+function closeCartDetail() {
+    const el = document.getElementById('syspago-cart-detail');
+    if (!el) return;
+    el.style.opacity = '0';
+    setTimeout(() => { try { el.remove(); } catch (e) { } }, 180);
+}
+window.closeCartDetail = closeCartDetail;
+
+// Render del detalle del carrito (llama a funciones ya existentes para actualizar cantidad / remover)
+function renderCartDetail() {
+    const container = document.getElementById('syspago-cart-content');
+    if (!container) return;
+
+    const cart = (state && Array.isArray(state.cart)) ? state.cart : [];
+
+    if (!cart || cart.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-gray-600">Carrito vacío.</div>`;
+        document.getElementById('cart-subtotal').textContent = window.formatCurrency ? window.formatCurrency(0) : '$0.00';
+        document.getElementById('cart-total').textContent = window.formatCurrency ? window.formatCurrency(0) : '$0.00';
+        return;
+    }
+
+    // Generar filas
+    const rows = cart.map(item => {
+        const priceStr = window.formatCurrency ? window.formatCurrency(item.price || 0) : ('$' + (item.price || 0));
+        const lineTotal = (item.price || 0) * (item.quantity || 1);
+        const lineTotalStr = window.formatCurrency ? window.formatCurrency(lineTotal) : ('$' + lineTotal.toFixed(2));
+        const id = item.id || (Math.random() * 1000000 | 0);
+
+        return `
+            <div class="px-4 py-4 border-b bg-white flex items-start justify-between">
+                <div class="flex-1 pr-3">
+                    <div class="text-sm font-semibold text-gray-800">${(item.name || '').toUpperCase()}</div>
+                    <div class="text-sm text-gray-600 mt-1">${priceStr}</div>
+                    <div class="mt-2">
+                        <button data-action="remove" data-id="${id}" class="text-sm text-red-500">Eliminar</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end">
+                    <div class="flex items-center border rounded">
+                        <button data-action="dec" data-id="${id}" class="px-3 py-1 text-lg">−</button>
+                        <div class="px-4 py-1 border-l border-r" style="min-width:42px; text-align:center;">${item.quantity || 1}</div>
+                        <button data-action="inc" data-id="${id}" class="px-3 py-1 text-lg">+</button>
+                    </div>
+                    <div class="mt-3 font-semibold text-gray-900">${lineTotalStr}</div>
+                    <div class="text-xs text-gray-500 mt-1">- $0</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `<div class="bg-gray-50">${rows}</div>`;
+
+    // Enlazar botones (delegación local)
+    container.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+            const action = btn.getAttribute('data-action');
+            const idAttr = btn.getAttribute('data-id');
+            // Encontrar el item por id en state.cart (coincidimos por item.id o fallback por name/price)
+            const itemIndex = state.cart.findIndex(it => String(it.id) === String(idAttr));
+            let found = itemIndex >= 0 ? state.cart[itemIndex] : null;
+            if (!found) {
+                // fallback: intentar buscar por nombre/price si id no coincide
+                found = state.cart.find(it => String(it.name || '') === String(btn.closest('div').querySelector('.font-semibold')?.textContent || ''));
+            }
+
+            if (action === 'remove') {
+                if (found) {
+                    window.removeItem && window.removeItem(found.id);
+                    renderCartDetail();
+                    window.showToast && window.showToast(`'${found.name}' eliminado`, 'success', 1500);
+                    window.renderApp && window.renderApp();
+                    window.calculateTotals && window.calculateTotals();
+                }
+                return;
+            }
+
+            if (!found) return;
+
+            const currentQty = Number(found.quantity || 1);
+            if (action === 'inc') {
+                const newQty = currentQty + 1;
+                window.updateItemQuantity && window.updateItemQuantity(found.id, newQty);
+            } else if (action === 'dec') {
+                const newQty = currentQty - 1;
+                if (newQty <= 0) {
+                    // confirmar eliminación
+                    if (confirm('¿Eliminar artículo del carrito?')) {
+                        window.removeItem && window.removeItem(found.id);
+                    }
+                } else {
+                    window.updateItemQuantity && window.updateItemQuantity(found.id, newQty);
+                }
+            }
+
+            // recalcular y actualizar visual
+            window.calculateTotals && window.calculateTotals();
+            renderCartDetail();
+            window.renderApp && window.renderApp();
+        });
+    });
+
+    // Actualizar sumas
+    document.getElementById('cart-subtotal').textContent = window.formatCurrency ? window.formatCurrency(state.subtotal || 0) : ('$' + (state.subtotal || 0).toFixed(2));
+    document.getElementById('cart-discount').textContent = window.formatCurrency ? window.formatCurrency(0) : '$0.00';
+    document.getElementById('cart-total').textContent = window.formatCurrency ? window.formatCurrency(state.total || state.subtotal || 0) : ('$' + (state.total || state.subtotal || 0).toFixed(2));
+}
+
+// Borrar todo el carrito
+window.clearCart = function () {
+    state.cart = [];
+    state.subtotal = 0;
+    state.total = 0;
+    window.renderApp && window.renderApp();
+    window.showToast && window.showToast('Carrito borrado', 'success', 1500);
+    // también actualizamos Firestore/localStorage si corresponde
+    window.saveStateToFirestore && window.saveStateToFirestore();
+};
+
+// ---------- SUGERENCIA: botón "Ver Carrito" ----------
+// Puedes insertar este botón en el template donde se muestra el Footer o en la vista PV Venta.
+// Ejemplo simple: añade un botón flotante en la esquina inferior derecha que abra el panel
+(function addCartFloatingButton() {
+    if (document.getElementById('syspago-cart-fab')) return;
+    const fab = document.createElement('button');
+    fab.id = 'syspago-cart-fab';
+    fab.title = 'Ver carrito';
+    fab.style.position = 'fixed';
+    fab.style.right = '18px';
+    fab.style.bottom = '18px';
+    fab.style.zIndex = '9997';
+    fab.style.width = '56px';
+    fab.style.height = '56px';
+    fab.style.borderRadius = '999px';
+    fab.style.border = 'none';
+    fab.style.background = '#2563EB'; // azul
+    fab.style.color = 'white';
+    fab.style.boxShadow = '0 6px 18px rgba(0,0,0,0.15)';
+    fab.style.cursor = 'pointer';
+    fab.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72"/></svg>';
+    document.body.appendChild(fab);
+    fab.addEventListener('click', () => {
+        window.openCartDetail && window.openCartDetail();
+    });
+})();
+
+
+// ---------- Bottom-sheet de pago (modal desde abajo) ----------
+
+window.openCheckoutSheet = function (options = {}) {
+    try {
+        // evitar duplicados
+        if (document.getElementById('syspago-checkout-sheet')) return;
+
+        const total = (options.total !== undefined) ? options.total : (state && (state.total || state.subtotal) ? (state.total || state.subtotal) : 0);
+        const totalStr = window.formatCurrency ? window.formatCurrency(total) : ('$' + (Number(total || 0)).toFixed(2));
+
+        // fondo que cubre la pantalla (para detectar clicks fuera)
+        const backdrop = document.createElement('div');
+        backdrop.id = 'syspago-checkout-backdrop';
+        backdrop.style.position = 'fixed';
+        backdrop.style.left = '0';
+        backdrop.style.top = '0';
+        backdrop.style.width = '100vw';
+        backdrop.style.height = '100vh';
+        backdrop.style.zIndex = '10050';
+        backdrop.style.background = 'rgba(0,0,0,0.25)';
+        backdrop.style.backdropFilter = 'blur(0.1px)';
+        backdrop.style.opacity = '0';
+        backdrop.style.transition = 'opacity 220ms ease';
+
+        // sheet contenido (fijo abajo)
+        const sheet = document.createElement('div');
+        sheet.id = 'syspago-checkout-sheet';
+        sheet.style.position = 'fixed';
+        sheet.style.left = '0';
+        sheet.style.right = '0';
+        sheet.style.bottom = '0';
+        sheet.style.zIndex = '10051';
+        sheet.style.maxWidth = '900px';
+        sheet.style.margin = '0 auto';
+        sheet.style.borderTopLeftRadius = '14px';
+        sheet.style.borderTopRightRadius = '14px';
+        sheet.style.boxShadow = '0 -8px 30px rgba(0,0,0,0.18)';
+        sheet.style.background = 'linear-gradient(#ffffff,#fafafa)';
+        sheet.style.padding = '18px';
+        sheet.style.transform = 'translateY(120%)';
+        sheet.style.transition = 'transform 260ms cubic-bezier(.2,.9,.3,1)';
+        sheet.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial';
+
+        sheet.innerHTML = `
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="font-size:0.95rem; color:#444;">Total:</div>
+                <div style="font-size:1.25rem; font-weight:700; color:#111;">${totalStr}</div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+                <button id="syspago-pay-cash" style="width:100%; padding:14px; border-radius:10px; border:2px solid #2b6cb0; background:#fff; color:#2b6cb0; font-weight:600;">Efectivo</button>
+                <button id="syspago-pay-card" style="width:100%; padding:14px; border-radius:10px; border:2px solid #2b6cb0; background:#fff; color:#2b6cb0; font-weight:600;">Tarjeta</button>
+            </div>
+
+            <div style="height:8px;"></div>
+        `;
+
+        // Añadir al DOM
+        document.body.appendChild(backdrop);
+        document.body.appendChild(sheet);
+
+        // Forzar reflow y animar
+        requestAnimationFrame(() => {
+            backdrop.style.opacity = '1';
+            sheet.style.transform = 'translateY(0%)';
+        });
+
+        function closeSheet() {
+            try {
+                sheet.style.transform = 'translateY(120%)';
+                backdrop.style.opacity = '0';
+                setTimeout(() => {
+                    try { backdrop.remove(); } catch (e) { }
+                    try { sheet.remove(); } catch (e) { }
+                }, 260);
+            } catch (e) { console.error(e); }
+        }
+
+        // Cerrar al tocar el backdrop
+        backdrop.addEventListener('click', () => closeSheet());
+
+        // Botones de pago
+        document.getElementById('syspago-pay-cash').addEventListener('click', () => {
+            // Acción ejemplo: registrar pago en efectivo
+            closeSheet();
+            window.showToast && window.showToast('Pago en efectivo seleccionado', 'success', 1500);
+            // Aquí podrías abrir la vista de cobro o llamar processCheckout('cash')
+            if (typeof window.processCheckout === 'function') window.processCheckout('cash', total);
+            else if (typeof window.changeView === 'function') window.changeView('checkout');
+        });
+
+        document.getElementById('syspago-pay-card').addEventListener('click', () => {
+            closeSheet();
+            window.showToast && window.showToast('Pago con tarjeta seleccionado', 'success', 1500);
+            if (typeof window.processCheckout === 'function') window.processCheckout('card', total);
+            else if (typeof window.changeView === 'function') window.changeView('checkout');
+        });
+
+        // Soporte tecla ESC para cerrar
+        function onEsc(e) {
+            if (e.key === 'Escape') closeSheet();
+        }
+        document.addEventListener('keydown', onEsc);
+        // remover listener al cerrar sheet
+        backdrop._cleanup = () => document.removeEventListener('keydown', onEsc);
+
+        // Aseguramos cleanup al remover elementos
+        const observer = new MutationObserver(() => {
+            if (!document.body.contains(sheet)) {
+                try {
+                    backdrop._cleanup && backdrop._cleanup();
+                    observer.disconnect();
+                } catch (e) { }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: false });
+
+        return {
+            close: closeSheet
+        };
+
+    } catch (err) {
+        console.error('openCheckoutSheet error', err);
+    }
+};
+
+// Interceptar clicks del botón "REALIZAR PAGO" dentro del panel del carrito (delegación global)
+// Esto funciona aunque el botón se cree dinámicamente por openCartDetail
+document.body.addEventListener('click', function (ev) {
+    const btn = ev.target.closest && ev.target.closest('#cart-checkout');
+    if (!btn) return;
+    ev.preventDefault();
+    // calcular total actual (state.total preferido)
+    const total = (state && (state.total || state.subtotal)) ? (state.total || state.subtotal) : 0;
+    window.openCheckoutSheet && window.openCheckoutSheet({ total });
+});
+
+
+// ====== Pago con tarjeta: pantalla de lector listo ======
+// Pegar este bloque al final de js/app.js (fuera de otras funciones).
+// Este código crea una vista full-screen que simula la pantalla "Lector listo"
+// y la apertura se realiza desde window.processCheckout('card', total).
+
+window.openCardReaderView = function (options = {}) {
+    try {
+        // cerrar cualquier sheet/modal previo
+        try { const bs = document.getElementById('syspago-checkout-sheet'); if (bs) bs.remove(); } catch (e) { }
+        try { const bd = document.getElementById('syspago-checkout-backdrop'); if (bd) bd.remove(); } catch (e) { }
+        // cerrar panel carrito si existe
+        try { closeCartDetail && closeCartDetail(); } catch (e) { }
+
+        // prevenir duplicados
+        if (document.getElementById('syspago-card-reader')) return;
+
+        const total = (options.total !== undefined) ? options.total : (state && (state.total || state.subtotal) ? (state.total || state.subtotal) : 0);
+        const totalStr = window.formatCurrency ? window.formatCurrency(total) : ('$' + (Number(total || 0)).toFixed(2));
+
+        // overlay full-screen
+        const overlay = document.createElement('div');
+        overlay.id = 'syspago-card-reader';
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.zIndex = '11000';
+        overlay.style.background = '#ffffff';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'flex-start';
+        overlay.style.paddingTop = '36px';
+        overlay.style.transition = 'opacity 200ms ease';
+        overlay.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial';
+
+        // contenido (adaptable al estilo que muestras en la captura)
+        overlay.innerHTML = `
+            <div style="width:100%; max-width:480px; text-align:center;">
+                <div style="margin-bottom:18px;">
+                    <!-- iconos superiores -->
+                    <div style="font-size:28px; color:#2b6cb0; margin-bottom:6px;">🔊</div>
+                </div>
+
+                <div style="font-weight:600; color:#222; margin-bottom:6px; font-size:18px;">Lector Listo</div>
+
+                <div style="margin:16px 0;">
+                    <!-- logo -->
+                    <div style="font-weight:700; font-size:28px; color:#2b6cb0; margin-bottom:8px;">SYSpago</div>
+
+                    <!-- icono del lector -->
+                    <div style="width:140px; height:160px; margin:0 auto 10px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                        <svg width="100" height="120" viewBox="0 0 24 24" fill="none" stroke="#d13a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="12" height="18" rx="1.5"></rect>
+                            <circle cx="7.5" cy="8" r="0.6" fill="#d13a3a"></circle>
+                            <circle cx="11.5" cy="8" r="0.6" fill="#d13a3a"></circle>
+                            <rect x="6" y="12" width="7" height="2" rx="0.5"></rect>
+                        </svg>
+                    </div>
+                </div>
+
+                <div style="color:#333; margin-top:6px; font-size:15px;">Por favor acerque ó inserte la tarjeta</div>
+
+                <div style="margin-top:18px; font-size:14px; color:#888;">Monto</div>
+                <div id="syspago-card-amount" style="font-size:36px; font-weight:700; color:#111; margin-top:6px;">${totalStr}</div>
+
+                <div style="height:24px;"></div>
+
+                <div style="padding:0 18px; width:100%; box-sizing:border-box;">
+                    <button id="syspago-card-cancel" style="width:100%; background:#2b6cb0; color:white; border:none; padding:14px; border-radius:8px; font-weight:700;">CANCELAR TRANSACCION</button>
+                </div>
+
+                <div style="height:36px;"></div>
+
+                <div id="syspago-card-status" style="color:#2b6cb0; font-weight:600;"></div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Simular lector listo / esperando tarjeta
+        const status = document.getElementById('syspago-card-status');
+        let intervalId = null;
+        let dots = 0;
+        function startWaiting() {
+            if (!status) return;
+            status.textContent = 'Esperando tarjeta';
+            intervalId = setInterval(() => {
+                dots = (dots + 1) % 4;
+                status.textContent = 'Esperando tarjeta' + '.'.repeat(dots);
+            }, 600);
+        }
+        startWaiting();
+
+        // Cancelar
+        document.getElementById('syspago-card-cancel').addEventListener('click', () => {
+            // detener simulación
+            try { if (intervalId) clearInterval(intervalId); } catch (e) { }
+            // cerrar vista
+            try { overlay.remove(); } catch (e) { }
+            window.showToast && window.showToast('Transacción cancelada', 'success', 1400);
+            // regresar al panel carrito o a la vista que prefieras
+            if (typeof openCartDetail === 'function') openCartDetail();
+        });
+
+        // Si quieres poder cerrar con ESC
+        function onEsc(e) { if (e.key === 'Escape') { try { if (intervalId) clearInterval(intervalId); } catch (e) { }; try { overlay.remove(); } catch (e) { } } }
+        document.addEventListener('keydown', onEsc);
+        // cleanup al remover overlay
+        const mo = new MutationObserver(() => {
+            if (!document.body.contains(overlay)) {
+                try { document.removeEventListener('keydown', onEsc); } catch (e) { }
+                try { if (intervalId) clearInterval(intervalId); } catch (e) { }
+                mo.disconnect();
+            }
+        });
+        mo.observe(document.body, { childList: true, subtree: false });
+
+        return overlay;
+    } catch (err) {
+        console.error('openCardReaderView error', err);
+    }
+};
+
+// ====== processCheckout: enruta a pantalla de tarjeta o efectivo ======
+window.processCheckout = window.processCheckout || function (method, total) {
+    try {
+        // cerrar checkout sheet si está abierto
+        try { const s = document.getElementById('syspago-checkout-sheet'); if (s) s.remove(); } catch (e) { }
+        try { const b = document.getElementById('syspago-checkout-backdrop'); if (b) b.remove(); } catch (e) { }
+
+        // Si method === 'card' abrir pantalla lector
+        if (method === 'card') {
+            window.openCardReaderView && window.openCardReaderView({ total: total });
+            return;
+        }
+
+        // Si method === 'cash' manejar flujo efectivo (por ahora mostramos toast y cambiamos a view checkout si existe)
+        if (method === 'cash') {
+            window.showToast && window.showToast('Iniciando pago en efectivo', 'success', 1200);
+            if (typeof window.changeView === 'function') window.changeView('checkout');
+            return;
+        }
+
+        // fallback: open checkout view
+        if (typeof window.changeView === 'function') window.changeView('checkout');
+    } catch (err) {
+        console.error('processCheckout error', err);
+    }
+};
+
+// Interceptar clicks de openCheckoutSheet si el usuario eligió tarjeta en el sheet
+// (ya está cubierto por el listener que llama processCheckout en openCheckoutSheet).
+// Asegúrate de que el botón de "Tarjeta" en el sheet llama a processCheckout('card', total).
+
+
+// ====== Pago en Efectivo: pantalla full-screen con cálculo de cambio ======
+// Pegar este bloque al final de js/app.js (fuera de otras funciones)
+
+window.openCashPaymentView = function (options = {}) {
+    try {
+        // evitar duplicados
+        if (document.getElementById('syspago-cash-view')) return;
+
+        const total = (options.total !== undefined) ? Number(options.total) : Number((state && (state.total || state.subtotal)) ? (state.total || state.subtotal) : 0);
+        const totalStr = window.formatCurrency ? window.formatCurrency(total) : ('$' + total.toFixed(2));
+
+        // Cerrar overlays previos (checkout sheet / cart detail) si existen
+        try { const bs = document.getElementById('syspago-checkout-sheet'); if (bs) bs.remove(); } catch (e) { }
+        try { const bd = document.getElementById('syspago-checkout-backdrop'); if (bd) bd.remove(); } catch (e) { }
+        try { closeCartDetail && closeCartDetail(); } catch (e) { }
+
+        // Crear overlay full-screen
+        const overlay = document.createElement('div');
+        overlay.id = 'syspago-cash-view';
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.zIndex = '12000';
+        overlay.style.background = '#fff';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'flex-start';
+        overlay.style.padding = '18px';
+        overlay.style.boxSizing = 'border-box';
+        overlay.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial';
+
+        overlay.innerHTML = `
+            <div style="width:100%; max-width:640px; text-align:left;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                    <button id="syspago-cash-back" style="background:none; border:none; font-size:18px; color:#333; padding:6px; cursor:pointer;">←</button>
+                    <div style="font-size:20px; font-weight:600;">Pago en Efectivo</div>
+                </div>
+
+                <div style="text-align:center; margin-top:22px;">
+                    <div style="color:#666; font-size:14px;">Tu Total</div>
+                    <div id="syspago-cash-total" style="font-size:48px; font-weight:700; color:#111; margin-top:6px;">${totalStr}</div>
+                </div>
+
+                <div style="margin-top:28px;">
+                    <label style="display:block; color:#777; margin-bottom:8px;">Monto recibida</label>
+                    <input id="syspago-cash-received" inputmode="decimal" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%; padding:14px 12px; font-size:18px; border:none; border-bottom:1px solid #ccc; outline:none;" />
+                </div>
+
+                <div style="margin-top:36px; text-align:center;">
+                    <div style="color:#888; font-size:14px;">Cambio</div>
+                    <div id="syspago-cash-change" style="font-size:28px; font-weight:700; color:#111; margin-top:6px;">${window.formatCurrency ? window.formatCurrency(0) : '$0.00'}</div>
+                </div>
+
+                <div style="height:22px;"></div>
+
+                <div style="padding:0 0 28px 0;">
+                    <button id="syspago-cash-accept" style="width:100%; max-width:100%; padding:14px; border-radius:8px; background:#2d3748; color:white; font-weight:700; border:none; font-size:16px;">ACEPTAR PAGO</button>
+                </div>
+
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Referencias
+        const input = document.getElementById('syspago-cash-received');
+        const changeEl = document.getElementById('syspago-cash-change');
+        const acceptBtn = document.getElementById('syspago-cash-accept');
+        const backBtn = document.getElementById('syspago-cash-back');
+
+        // Formateador
+        const fmt = (v) => window.formatCurrency ? window.formatCurrency(Number(v || 0)) : ('$' + Number(v || 0).toFixed(2));
+
+        // Actualizar cambio cuando cambia el campo
+        function updateChange() {
+            const receivedRaw = parseFloat((input.value || '0').toString().replace(',', '.')) || 0;
+            const change = Math.max(0, receivedRaw - total);
+            changeEl.textContent = fmt(change);
+        }
+
+        // Eventos
+        input.addEventListener('input', () => {
+            updateChange();
+        });
+
+        // Botón aceptar pago
+        acceptBtn.addEventListener('click', () => {
+            const receivedRaw = parseFloat((input.value || '0').toString().replace(',', '.')) || 0;
+            if (isNaN(receivedRaw) || receivedRaw <= 0) {
+                window.showToast && window.showToast('Ingresa monto recibido válido', 'error', 2000);
+                return;
+            }
+            if (receivedRaw < total) {
+                // confirmar cobro incompleto
+                if (!confirm('El monto recibido es menor al total. ¿Deseas continuar?')) return;
+            }
+
+            // Finalizar pago: tipo 'cash'
+            window.finalizePayment && window.finalizePayment('cash', total, receivedRaw);
+            // cerrar vista
+            try { overlay.remove(); } catch (e) { }
+        });
+
+        // Back / cerrar (volver al carrito)
+        backBtn.addEventListener('click', () => {
+            try { overlay.remove(); } catch (e) { }
+            // volver al panel carrito
+            try { openCartDetail && openCartDetail(); } catch (e) { }
+        });
+
+        // Soporte ESC
+        function onEsc(e) {
+            if (e.key === 'Escape') {
+                try { overlay.remove(); } catch (e) { }
+            }
+        }
+        document.addEventListener('keydown', onEsc);
+        // cleanup observer para remover listener cuando overlay desaparezca
+        const mo = new MutationObserver(() => {
+            if (!document.body.contains(overlay)) {
+                try { document.removeEventListener('keydown', onEsc); } catch (e) { }
+                mo.disconnect();
+            }
+        });
+        mo.observe(document.body, { childList: true, subtree: false });
+
+        // foco al input al abrir
+        setTimeout(() => {
+            try { input.focus(); } catch (e) { }
+            updateChange();
+        }, 120);
+
+        return overlay;
+
+    } catch (err) {
+        console.error('openCashPaymentView error', err);
+    }
+};
+
+window.finalizePayment = window.finalizePayment || function (method, total, received) {
+    try {
+        // normalizar valores
+        total = Number(total || 0);
+        received = Number(received || 0);
+        const change = Math.max(0, Number(received - total));
+
+        // construir transacción resumida
+        const tx = {
+            id: Date.now(),
+            items: Array.isArray(state.cart) ? [...state.cart] : [],
+            total: Number(total),
+            received: Number(received),
+            change: Number(change),
+            method: method || 'unknown',
+            date: new Date().toISOString()
+        };
+
+        // guardar en estado (para mostrar en la pantalla de éxito y/o persistir)
+        state.lastTransaction = tx;
+        // opcional: persistir el estado
+        window.saveStateToFirestore && window.saveStateToFirestore();
+
+        // Mostrar pantalla de éxito con detalles (no vaciamos el carrito aquí, se hará cuando el usuario pulse "¡Listo ir a caja")
+        window.openPaymentSuccessView && window.openPaymentSuccessView(tx);
+
+        // también mostrar toast breve
+        window.showToast && window.showToast('Pago procesado correctamente', 'success', 1600);
+    } catch (err) {
+        console.error('finalizePayment error', err);
+        window.showToast && window.showToast('Error procesando pago', 'error', 1600);
+    }
+};
+
+// Asegurar que processCheckout redirija a la vista cash cuando corresponda
+if (typeof window.processCheckout === 'function') {
+    const originalProcess = window.processCheckout;
+    window.processCheckout = function (method, total) {
+        if (method === 'cash') {
+            window.openCashPaymentView && window.openCashPaymentView({ total });
+            return;
+        }
+        // fallback al original para otros métodos (card)
+        return originalProcess(method, total);
+    };
+} else {
+    // si no existía, definimos una simple implementación
+    window.processCheckout = function (method, total) {
+        if (method === 'cash') {
+            window.openCashPaymentView && window.openCashPaymentView({ total });
+        } else if (method === 'card') {
+            window.openCardReaderView && window.openCardReaderView({ total });
+        }
+    };
+}
+
+
+// Función que muestra la pantalla final tipo "Pago realizado con éxito"
+window.openPaymentSuccessView = window.openPaymentSuccessView || function (tx = {}) {
+    try {
+        if (!tx || typeof tx !== 'object') tx = state.lastTransaction || {};
+        if (document.getElementById('syspago-payment-success')) return;
+
+        const totalStr = window.formatCurrency ? window.formatCurrency(tx.total || 0) : ('$' + Number(tx.total || 0).toFixed(2));
+        const receivedStr = window.formatCurrency ? window.formatCurrency(tx.received || 0) : ('$' + Number(tx.received || 0).toFixed(2));
+        const changeStr = window.formatCurrency ? window.formatCurrency(tx.change || 0) : ('$' + Number(tx.change || 0).toFixed(2));
+
+        // crear overlay full-screen
+        const overlay = document.createElement('div');
+        overlay.id = 'syspago-payment-success';
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.zIndex = '13000';
+        overlay.style.background = '#fff';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'flex-start';
+        overlay.style.padding = '18px';
+        overlay.style.boxSizing = 'border-box';
+        overlay.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial';
+        overlay.style.overflow = 'auto';
+
+        overlay.innerHTML = `
+            <div style="width:100%; max-width:640px; text-align:center; margin-top:28px;">
+                <div id="syspago-success-total" style="font-size:56px; font-weight:600; color:#111; margin-bottom:18px;">${totalStr}</div>
+                <div style="color:#1e40af; font-weight:700; margin-bottom:22px; font-size:16px;">PAGO REALIZADO CON ÉXITO!!</div>
+
+                <div style="width:100%; margin-top:8px; text-align:left;">
+                    <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #eee;">
+                        <div style="color:#777;">Monto</div>
+                        <div style="font-weight:600; color:#111;">${totalStr}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #eee;">
+                        <div style="color:#777;">Monto recibida</div>
+                        <div style="font-weight:600; color:#111;">${receivedStr}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #eee; margin-bottom:12px;">
+                        <div style="color:#777;">Cambio</div>
+                        <div style="font-weight:600; color:#111;">${changeStr}</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:22px; display:flex; flex-direction:column; gap:12px;">
+                    <button id="syspago-success-done" style="padding:12px 18px; background:#2b6cb0; color:white; border:none; border-radius:10px; font-weight:700;">¡Listo ir a caja</button>
+                    <button id="syspago-success-share" style="padding:12px 18px; background:white; color:#2b6cb0; border:2px solid #2b6cb0; border-radius:10px; font-weight:700;">COMPARTIR TICKET</button>
+                </div>
+
+                <div style="height:32px;"></div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Handlers
+        document.getElementById('syspago-success-done').addEventListener('click', () => {
+            // Al confirmar: vaciar carrito, recalcular totales y volver a la vista principal (o a caja)
+            try {
+                if (Array.isArray(state.cart)) state.cart = [];
+                state.subtotal = 0;
+                state.total = 0;
+                window.saveStateToFirestore && window.saveStateToFirestore();
+                window.renderApp && window.renderApp();
+                window.showToast && window.showToast('Listo, carrito actualizado', 'success', 1200);
+            } catch (e) {
+                console.error('error al vaciar carrito', e);
+            } finally {
+                try { overlay.remove(); } catch (e) { }
+                // opcional: cambiar a vista 'checkout' o 'movements' según flujo
+                if (typeof window.changeView === 'function') window.changeView('cart');
+            }
+        });
+
+        document.getElementById('syspago-success-share').addEventListener('click', async () => {
+            try {
+                await window.shareTransaction ? window.shareTransaction(tx) : shareTicketFallback(tx);
+            } catch (e) {
+                console.error('Error compartiendo ticket', e);
+                window.showToast && window.showToast('No se pudo compartir el ticket', 'error', 1400);
+            }
+        });
+
+        // fallback share: copiar texto al portapapeles o usar navigator.share si está disponible
+        async function shareTicketFallback(txData) {
+            try {
+                const when = new Date(txData.date || Date.now()).toLocaleString();
+                let body = `TICKET - Transacción: ${txData.id}\nFecha: ${when}\n\nItems:\n`;
+                (txData.items || []).forEach(it => {
+                    const q = it.quantity || 1;
+                    body += `- ${it.name} x${q} ${window.formatCurrency ? window.formatCurrency((it.price || 0) * q) : ('$' + ((it.price || 0) * q).toFixed(2))}\n`;
+                });
+                body += `\nMonto: ${window.formatCurrency ? window.formatCurrency(txData.total) : ('$' + Number(txData.total).toFixed(2))}\n`;
+                body += `Recibido: ${window.formatCurrency ? window.formatCurrency(txData.received) : ('$' + Number(txData.received).toFixed(2))}\n`;
+                body += `Cambio: ${window.formatCurrency ? window.formatCurrency(txData.change) : ('$' + Number(txData.change).toFixed(2))}\n`;
+
+                if (navigator.share) {
+                    await navigator.share({
+                        title: `Ticket ${txData.id}`,
+                        text: body
+                    });
+                    window.showToast && window.showToast('Ticket compartido', 'success', 1500);
+                    return;
+                }
+
+                // copiar al portapapeles como fallback
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(body);
+                    window.showToast && window.showToast('Ticket copiado al portapapeles', 'success', 1500);
+                    return;
+                }
+
+                // último recurso: abrir prompt con texto para que el usuario copie manualmente
+                prompt('Copiar ticket (Ctrl+C, Enter):', body);
+            } catch (err) {
+                console.error('shareTicketFallback error', err);
+                throw err;
+            }
+        }
+
+    } catch (err) {
+        console.error('openPaymentSuccessView error', err);
+    }
+};
+
+
+// ====== Vista principal SYSpago (menu con PV Cloud / SyStienda) ======
+// Pega este bloque al final de js/app.js (fuera de otras funciones).
+
+window.showSyspagoMenu = function () {
+    const main = document.getElementById('main-content');
+    if (!main) return console.warn('No existe #main-content');
+
+    // estilos mínimos encapsulados (inline para no depender de CSS externo)
+    const style = `
+        <style id="syspago-menu-styles">
+        .syspago-menu { display:flex; flex-direction:column; align-items:center; padding:28px 16px; box-sizing:border-box; }
+        .syspago-tiles { display:flex; gap:22px; justify-content:center; margin-top:10px; margin-bottom:28px; }
+        .syspago-tile { width:108px; height:108px; background:#ffffff; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.07); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; border:1px solid rgba(0,0,0,0.04); text-align:center; padding:8px; }
+        .syspago-tile .icon { width:48px; height:48px; margin-bottom:8px; opacity:0.95; }
+        .syspago-tile .label { font-size:13px; color:#333; }
+        .syspago-logo { width:100%; display:flex; align-items:center; justify-content:center; margin-top:36px; }
+        .syspago-logo .big { font-weight:800; color:#1e40af; font-size:56px; letter-spacing:0.6px; }
+        @media (max-width:480px) {
+            .syspago-tiles { gap:12px; }
+            .syspago-tile { width:92px; height:92px; }
+            .syspago-logo .big { font-size:44px; }
+        }
+        </style>
+    `;
+
+    // Two tiles + big logo (SVG inline icons)
+    const html = `
+        ${document.getElementById('syspago-menu-styles') ? '' : style}
+        <div class="syspago-menu">
+            <div style="width:100%; max-width:760px;">
+                <div style="display:flex; justify-content:center;">
+                    <div class="syspago-tiles" role="navigation" aria-label="Syspago menu">
+                        <div class="syspago-tile" id="tile-pvcloud" title="PV Cloud">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="6" width="18" height="12" rx="2" fill="#fff" stroke="#2b6cb0" stroke-width="1.4"/>
+                                <path d="M7 9h10M7 13h6" stroke="#2b6cb0" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <div class="label">PV Cloud</div>
+                        </div>
+
+                        <div class="syspago-tile" id="tile-systienda" title="SyStienda">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3.5" y="4" width="17" height="14" rx="2" fill="#fff" stroke="#c026d3" stroke-width="1.4"/>
+                                <path d="M6 10h12" stroke="#c026d3" stroke-width="1.4" stroke-linecap="round"/>
+                            </svg>
+                            <div class="label">SyStienda</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="syspago-logo" aria-hidden="true">
+                <!-- Logo grande: si tienes una imagen real, reemplaza por <img src="ruta/logo.png"> -->
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <svg width="84" height="56" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <g fill="none" fill-rule="evenodd">
+                            <text x="0" y="43" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" fill="#ef4444">SYS</text>
+                            <text x="78" y="43" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" fill="#1e40af">pago</text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    `;
+
+    main.innerHTML = html;
+
+    // handlers: usa changeView si existe; si no, expón la acción deseada (puedes ajustar)
+    const tilePv = document.getElementById('tile-pvcloud');
+    const tileTi = document.getElementById('tile-systienda');
+
+    if (tilePv) tilePv.addEventListener('click', () => {
+        // ejemplo: abrir vista de venta (cart / pv)
+        if (typeof window.changeView === 'function') window.changeView('cart');
+        else if (typeof window.showPVCloud === 'function') window.showPVCloud();
+    });
+
+    if (tileTi) tileTi.addEventListener('click', () => {
+        // ejemplo: abrir otra vista (topup / tienda)
+        if (typeof window.changeView === 'function') window.changeView('topup');
+        else if (typeof window.showSyStienda === 'function') window.showSyStienda();
+    });
+};
+
+// Opcional: activar automáticamente al inicio (descomenta si quieres que sea la vista por defecto)
+state.currentView = 'syspago-menu';
+window.showSyspagoMenu();
