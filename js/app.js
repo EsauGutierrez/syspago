@@ -3007,7 +3007,7 @@ window.showInitialSplash = function () {
             }
         }
 
-        
+
 
         if (pvBtn) pvBtn.addEventListener('click', () => hideAndNavigate('cart'));
         if (stBtn) stBtn.addEventListener('click', () => hideAndNavigate('topup'));
@@ -3042,3 +3042,345 @@ try {
 } catch (e) {
     console.error('init splash error', e);
 }
+
+
+// === TECLADO VIRTUAL ON-SCREEN PARA DESKTOP TOUCH ===
+// Pegar al final de js/app.js (fuera de otras funciones)
+
+// Nota: el teclado se activa en dispositivos NO móviles (evita solaparse con teclado nativo).
+(function () {
+    // detecta mobile user agent
+    const isMobileUA = /Mobi|Android/i.test(navigator.userAgent || '');
+    // enable only on non-mobile (but also check touch capability if you want)
+    const enableVKBD = !isMobileUA;
+
+    if (!enableVKBD) {
+        console.log('[vkbd] device mobile, no virtual keyboard needed.');
+        return;
+    }
+
+    // crear DOM del teclado (si no existe)
+    function createVKBD() {
+        if (document.getElementById('syspago-vkbd')) return;
+        const container = document.createElement('div');
+        container.id = 'syspago-vkbd';
+        container.className = 'alpha';
+        container.innerHTML = `
+            <div class="vk-top">
+                <div class="vk-info">Teclado en pantalla</div>
+                <div class="vk-hide" id="vkbd-hide">Ocultar ✕</div>
+            </div>
+
+            <div id="vk-rows">
+                <!-- filas se generan dinámicamente -->
+            </div>
+        `;
+        document.body.appendChild(container);
+    }
+
+    // layouts
+    const LAYOUTS = {
+        alpha: [
+            ['q','w','e','r','t','y','u','i','o','p'],
+            ['a','s','d','f','g','h','j','k','l'],
+            ['shift','z','x','c','v','b','n','m','backspace'],
+            ['123','space','enter']
+        ],
+        numeric: [
+            ['7','8','9'],
+            ['4','5','6'],
+            ['1','2','3'],
+            ['0','.','backspace'],
+            ['ABC','enter']
+        ]
+    };
+
+    // estado
+    let vkState = {
+        visible: false,
+        layout: 'alpha',
+        shift: false,
+        activeEl: null
+    };
+
+    // helpers para focus / insert
+    function isTextInput(el) {
+        if (!el) return false;
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea') return true;
+        if (el.isContentEditable) return true;
+        return false;
+    }
+    function supportsNumeric(el) {
+        if (!el) return false;
+        if (el.tagName && el.tagName.toLowerCase() === 'input') {
+            const t = el.getAttribute('type') || el.type || '';
+            const m = el.getAttribute('inputmode') || '';
+            if (/number|tel|numeric|decimal/i.test(t) || /numeric|tel|decimal/i.test(m)) return true;
+        }
+        return false;
+    }
+
+    function setActiveElement(el) {
+        vkState.activeEl = el;
+        // adjust layout if numeric
+        if (supportsNumeric(el)) {
+            vkState.layout = 'numeric';
+            document.getElementById('syspago-vkbd').classList.add('numeric');
+        } else {
+            vkState.layout = 'alpha';
+            document.getElementById('syspago-vkbd').classList.remove('numeric');
+        }
+        buildKeyboard();
+    }
+
+    // inserta texto en el elemento focalizado (usa selección/caret)
+    function insertTextAtCursor(el, text) {
+        if (!el) return;
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea') {
+            try {
+                const start = el.selectionStart || 0;
+                const end = el.selectionEnd || 0;
+                const value = el.value || '';
+                const newVal = value.slice(0,start) + text + value.slice(end);
+                el.value = newVal;
+                const pos = start + text.length;
+                el.setSelectionRange(pos,pos);
+                // trigger input event
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            } catch (e) {
+                // fallback simple append
+                el.value = (el.value || '') + text;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            try { el.focus({ preventScroll: true }); } catch(e){ el.focus(); }
+            return;
+        }
+        // contenteditable
+        if (el.isContentEditable) {
+            const sel = document.getSelection();
+            if (!sel) return;
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const node = document.createTextNode(text);
+            range.insertNode(node);
+            // move cursor after node
+            range.setStartAfter(node);
+            range.setEndAfter(node);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            // trigger input-like event
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.focus();
+            return;
+        }
+    }
+
+    function doBackspace(el) {
+        if (!el) return;
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea') {
+            try {
+                const start = el.selectionStart || 0;
+                const end = el.selectionEnd || 0;
+                if (start !== end) {
+                    // tiene selección
+                    const value = el.value || '';
+                    el.value = value.slice(0,start) + value.slice(end);
+                    el.setSelectionRange(start,start);
+                } else if (start > 0) {
+                    const value = el.value || '';
+                    const newStart = start - 1;
+                    el.value = value.slice(0,newStart) + value.slice(end);
+                    el.setSelectionRange(newStart,newStart);
+                }
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            } catch (e) {
+                // fallback: quitar último char
+                el.value = (el.value || '').slice(0, -1);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            try { el.focus({ preventScroll: true }); } catch(e){ el.focus(); }
+            return;
+        }
+        if (el.isContentEditable) {
+            const sel = document.getSelection();
+            if (!sel) return;
+            if (sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0);
+            if (!range.collapsed) {
+                range.deleteContents();
+            } else {
+                // try to delete previous character
+                range.setStart(range.startContainer, Math.max(0, range.startOffset - 1));
+                range.deleteContents();
+            }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.focus();
+        }
+    }
+
+    function commitEnter(el) {
+        if (!el) return;
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'textarea' || el.isContentEditable) {
+            insertTextAtCursor(el, '\n');
+            return;
+        }
+        // for input, try to trigger change/submit or blur
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.blur();
+    }
+
+    // construir teclado según layout y estado shift
+    function buildKeyboard() {
+        const container = document.getElementById('vk-rows');
+        if (!container) return;
+        container.innerHTML = '';
+        const layout = vkState.layout === 'numeric' ? LAYOUTS.numeric : LAYOUTS.alpha;
+        layout.forEach(row => {
+            const rowEl = document.createElement('div');
+            rowEl.className = 'vk-row';
+            row.forEach(key => {
+                const keyEl = document.createElement('button');
+                keyEl.type = 'button';
+                keyEl.className = 'vk-key';
+                // wide keys
+                if (key === 'space') keyEl.classList.add('wider');
+                if (key === 'enter' || key === 'shift' || key === 'backspace' || key === '123' || key === 'ABC') keyEl.classList.add('wide', 'secondary');
+                const display = (function (k) {
+                    if (k === 'space') return '⎵';
+                    if (k === 'backspace') return '⌫';
+                    if (k === 'enter') return '↵';
+                    if (k === 'shift') return '⇧';
+                    if (k === '123') return '123';
+                    if (k === 'ABC') return 'ABC';
+                    return k;
+                })(key);
+                keyEl.textContent = (vkState.shift && /^[a-z]$/.test(key) ? key.toUpperCase() : display);
+                keyEl.dataset.key = key;
+                // click handler
+                keyEl.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    const k = keyEl.dataset.key;
+                    const active = vkState.activeEl;
+                    if (!active) return;
+                    if (k === 'shift') {
+                        vkState.shift = !vkState.shift;
+                        buildKeyboard();
+                        return;
+                    }
+                    if (k === 'backspace') {
+                        doBackspace(active);
+                        return;
+                    }
+                    if (k === 'enter') {
+                        commitEnter(active);
+                        return;
+                    }
+                    if (k === 'space') {
+                        insertTextAtCursor(active, ' ');
+                        return;
+                    }
+                    if (k === '123') {
+                        vkState.layout = 'numeric';
+                        document.getElementById('syspago-vkbd').classList.add('numeric');
+                        buildKeyboard();
+                        return;
+                    }
+                    if (k === 'ABC') {
+                        vkState.layout = 'alpha';
+                        document.getElementById('syspago-vkbd').classList.remove('numeric');
+                        buildKeyboard();
+                        return;
+                    }
+                    // normal char
+                    const toInsert = (vkState.shift && key.length === 1 && key.match(/^[a-z]$/)) ? key.toUpperCase() : key;
+                    insertTextAtCursor(active, toInsert);
+                });
+                rowEl.appendChild(keyEl);
+            });
+            container.appendChild(rowEl);
+        });
+    }
+
+    // show/hide functions
+    function showVKBD() {
+        createVKBD();
+        const kb = document.getElementById('syspago-vkbd');
+        if (!kb) return;
+        document.body.classList.remove('no-virtual-keyboard');
+        kb.style.display = 'block';
+        vkState.visible = true;
+        buildKeyboard();
+    }
+    function hideVKBD() {
+        const kb = document.getElementById('syspago-vkbd');
+        if (!kb) return;
+        kb.style.display = 'none';
+        vkState.visible = false;
+        vkState.activeEl = null;
+    }
+
+    // attach global listeners: focus on inputs => show keyboard
+    function onFocusIn(e) {
+        const target = e.target;
+        if (!isTextInput(target)) return;
+        // ignore readonly/disabled
+        if (target.readOnly || target.disabled) return;
+        // set active
+        setActiveElement(target);
+        // show keyboard
+        showVKBD();
+        // ensure caret visible: scroll into view if needed
+        try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e){}
+    }
+
+    function onFocusOut(e) {
+        // delay hiding to allow clicks on keyboard to register
+        setTimeout(() => {
+            // if focus is inside keyboard, don't hide
+            const active = document.activeElement;
+            const kb = document.getElementById('syspago-vkbd');
+            if (!kb) return;
+            if (kb.contains(active)) return;
+            // also if vkState.activeEl exists and still focused, keep
+            if (vkState.activeEl && (document.activeElement === vkState.activeEl)) return;
+            // otherwise hide
+            hideVKBD();
+        }, 120);
+    }
+
+    // click on hide button
+    function attachHideControl() {
+        const hideBtn = document.getElementById('vkbd-hide');
+        if (!hideBtn) return;
+        hideBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            hideVKBD();
+        });
+    }
+
+    // initialize
+    function install() {
+        createVKBD();
+        attachHideControl();
+        // delegate focus/blur
+        document.addEventListener('focusin', onFocusIn);
+        document.addEventListener('focusout', onFocusOut);
+        // also support touchstart to open keyboard when tapping elements not focusing normally (some custom elements)
+        document.addEventListener('touchstart', (ev) => {
+            const t = ev.target.closest && ev.target.closest('input, textarea, [contenteditable="true"]');
+            if (!t) return;
+            // trigger focus
+            try { t.focus(); } catch(e){}
+        }, { passive: true });
+        console.log('[vkbd] virtual keyboard installed (desktop).');
+    }
+
+    // run installer
+    try { install(); } catch (e) { console.error('vkbd install error', e); }
+
+})();

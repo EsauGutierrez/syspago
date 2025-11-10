@@ -135,3 +135,87 @@ body {
     .syspago-splash .tiles { gap: 12px; }
     .syspago-splash .tile { width: 92px; height: 92px; }
 }
+
+/* === TECLADO VIRTUAL (on-screen) para desktop touch === */
+#syspago-vkbd {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15000;
+  background: linear-gradient(180deg, #f8fafc, #fff);
+  border-top: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 -6px 24px rgba(2,6,23,0.08);
+  padding: 10px;
+  display: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
+
+/* contenedor de filas */
+#syspago-vkbd .vk-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+/* tecla base */
+#syspago-vkbd .vk-key {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 8px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.07);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  color:#111827;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset;
+  transition: transform 80ms ease, background 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* tecla presionada visual */
+#syspago-vkbd .vk-key:active,
+#syspago-vkbd .vk-key.active {
+  transform: translateY(1px);
+  background: #f1f5f9;
+}
+
+/* teclas especiales, más anchas */
+#syspago-vkbd .vk-key.wide { min-width: 92px; border-radius: 10px; }
+#syspago-vkbd .vk-key.wider { min-width: 140px; border-radius: 10px; }
+
+/* apariencia para tecla secundaria (p. ej. symbols) */
+#syspago-vkbd .vk-key.secondary { background:#f8fafc; border:1px solid rgba(0,0,0,0.04); color:#0f172a; }
+
+/* contenedor superior con indicador y ocultar */
+#syspago-vkbd .vk-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  padding: 0 6px;
+}
+#syspago-vkbd .vk-top .vk-info { font-size:13px; color:#374151; }
+#syspago-vkbd .vk-top .vk-hide { font-size:13px; color:#0f172a; cursor:pointer; padding:6px; background:#eef2ff; border-radius:8px; border:1px solid rgba(14,165,233,0.12); }
+
+/* layout numerico centrado mayor */
+#syspago-vkbd.numeric .vk-key { min-width:60px; height:60px; font-size:20px; border-radius:10px; }
+
+/* versión compacta (pantallas grandes) */
+@media (min-width:900px) {
+  #syspago-vkbd { max-width: 960px; margin: 0 auto; left: 50%; transform: translateX(-50%); border-radius: 10px 10px 0 0; }
+}
+
+/* esconder teclado si se necesita (clase) */
+.no-virtual-keyboard #syspago-vkbd { display:none !important; }
+
+/* accesibilidad: focus visible */
+#syspago-vkbd .vk-key:focus { outline: 2px solid rgba(59,130,246,0.25); outline-offset: 1px; }
