@@ -1049,12 +1049,12 @@ function renderCartView() {
             `;
         }
 
-        // Producto genérico (sin cambios)
+        // Producto genérico
         const genericTabHtml = `
             <div class="p-4 bg-gray-50 rounded-b-lg">
                 <div class="space-y-3">
                     <input id="generic-name" type="text" placeholder="Nombre del producto" class="w-full p-3 border rounded" />
-                    <input id="generic-price" type="number" step="0.01" placeholder="Precio" class="w-full p-3 border rounded" />
+                    <input id="generic-price" type="text" inputmode="decimal" placeholder="Precio" class="w-full p-3 border rounded" />
                     <div class="flex justify-end space-x-2">
                         <button onclick="(function(){ document.getElementById('generic-name').value=''; document.getElementById('generic-price').value=''; })()" class="px-4 py-2 bg-gray-200 rounded">Limpiar</button>
                         <button onclick="(function(){ const n=document.getElementById('generic-name').value; const p=parseFloat(document.getElementById('generic-price').value)||0; if(n && p>0){ window.addItemToCart(n,p,1); document.getElementById('generic-name').value=''; document.getElementById('generic-price').value=''; } })()" class="px-4 py-2 bg-blue-600 text-white rounded">Agregar</button>
@@ -1084,6 +1084,28 @@ function renderCartView() {
         `;
 
         mainContent.innerHTML = cartHtml;
+
+        // Agregar validación al campo de precio del producto genérico
+        setTimeout(() => {
+            const priceInput = document.getElementById('generic-price');
+            if (priceInput) {
+                priceInput.addEventListener('input', (e) => {
+                    let value = e.target.value;
+                    // Remover caracteres no válidos (solo números y punto)
+                    value = value.replace(/[^0-9.]/g, '');
+                    // Permitir solo un punto decimal
+                    const parts = value.split('.');
+                    if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    // Limitar a 2 decimales
+                    if (parts.length === 2 && parts[1].length > 2) {
+                        value = parts[0] + '.' + parts[1].substring(0, 2);
+                    }
+                    e.target.value = value;
+                });
+            }
+        }, 100);
 
         // Nota: window.searchProducts debe existir y actualizar #product-search-results.
         // Si no existe, puedes pegar la implementación que te di antes; si existe, al escribir en el input
@@ -2063,6 +2085,9 @@ function setupEventListeners() {
         const target = event.target.closest('[data-action], [data-view], [data-key]');
         if (!target) return;
 
+        // Prevenir propagación para evitar procesamiento duplicado
+        event.stopPropagation();
+
         const action = target.getAttribute('data-action');
         const view = target.getAttribute('data-view');
         const key = target.getAttribute('data-key');
@@ -3018,7 +3043,7 @@ window.openCashPaymentView = function (options = {}) {
 
                 <div style="margin-top:28px;">
                     <label style="display:block; color:#777; margin-bottom:8px;">Monto recibida</label>
-                    <input id="syspago-cash-received" inputmode="decimal" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%; padding:14px 12px; font-size:18px; border:none; border-bottom:1px solid #ccc; outline:none;" />
+                    <input id="syspago-cash-received" inputmode="decimal" type="text" placeholder="0.00" style="width:100%; padding:14px 12px; font-size:18px; border:none; border-bottom:1px solid #ccc; outline:none;" />
                 </div>
 
                 <div style="margin-top:36px; text-align:center;">
@@ -3053,8 +3078,21 @@ window.openCashPaymentView = function (options = {}) {
             changeEl.textContent = fmt(change);
         }
 
-        // Eventos
-        input.addEventListener('input', () => {
+        // Validar que solo se ingresen números y punto decimal
+        input.addEventListener('input', (e) => {
+            let value = e.target.value;
+            // Remover caracteres no válidos (solo números y punto)
+            value = value.replace(/[^0-9.]/g, '');
+            // Permitir solo un punto decimal
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            // Limitar a 2 decimales
+            if (parts.length === 2 && parts[1].length > 2) {
+                value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+            e.target.value = value;
             updateChange();
         });
 
@@ -3426,12 +3464,16 @@ window.hideInitialSplash = function () {
                 el.value = newVal;
                 const pos = start + text.length;
                 el.setSelectionRange(pos,pos);
-                // trigger input event
-                el.dispatchEvent(new Event('input', { bubbles: true }));
+                // trigger input event con flag para evitar duplicación
+                const inputEvent = new Event('input', { bubbles: true });
+                inputEvent._fromVirtualKeyboard = true;
+                el.dispatchEvent(inputEvent);
             } catch (e) {
                 // fallback simple append
                 el.value = (el.value || '') + text;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
+                const inputEvent = new Event('input', { bubbles: true });
+                inputEvent._fromVirtualKeyboard = true;
+                el.dispatchEvent(inputEvent);
             }
             try { el.focus({ preventScroll: true }); } catch(e){ el.focus(); }
             return;
@@ -3474,11 +3516,15 @@ window.hideInitialSplash = function () {
                     el.value = value.slice(0,newStart) + value.slice(end);
                     el.setSelectionRange(newStart,newStart);
                 }
-                el.dispatchEvent(new Event('input', { bubbles: true }));
+                const inputEvent = new Event('input', { bubbles: true });
+                inputEvent._fromVirtualKeyboard = true;
+                el.dispatchEvent(inputEvent);
             } catch (e) {
                 // fallback: quitar último char
                 el.value = (el.value || '').slice(0, -1);
-                el.dispatchEvent(new Event('input', { bubbles: true }));
+                const inputEvent = new Event('input', { bubbles: true });
+                inputEvent._fromVirtualKeyboard = true;
+                el.dispatchEvent(inputEvent);
             }
             try { el.focus({ preventScroll: true }); } catch(e){ el.focus(); }
             return;
@@ -3516,6 +3562,69 @@ window.hideInitialSplash = function () {
     function buildKeyboard() {
         const container = document.getElementById('vk-rows');
         if (!container) return;
+        
+        // Solo configurar delegación de eventos una vez
+        if (!container._vkbdDelegationSetup) {
+            container._vkbdDelegationSetup = true;
+            
+            // Prevenir cambio de foco en mousedown
+            container.addEventListener('mousedown', (ev) => {
+                if (ev.target.classList.contains('vk-key')) {
+                    ev.preventDefault();
+                }
+            });
+            
+            // Delegación de eventos para todos los clicks en botones
+            container.addEventListener('click', (ev) => {
+                const keyEl = ev.target.closest('.vk-key');
+                if (!keyEl) return;
+                
+                ev.preventDefault();
+                ev.stopPropagation();
+                
+                const k = keyEl.dataset.key;
+                const active = vkState.activeEl;
+                if (!active) return;
+                
+                if (k === 'shift') {
+                    vkState.shift = !vkState.shift;
+                    buildKeyboard();
+                    return;
+                }
+                if (k === 'backspace') {
+                    doBackspace(active);
+                    return;
+                }
+                if (k === 'enter') {
+                    commitEnter(active);
+                    return;
+                }
+                if (k === 'space') {
+                    insertTextAtCursor(active, ' ');
+                    return;
+                }
+                if (k === '123') {
+                    vkState.layout = 'numeric';
+                    const kbd = document.getElementById('syspago-vkbd');
+                    if (kbd) {
+                        kbd.classList.add('numeric');
+                    }
+                    buildKeyboard();
+                    return;
+                }
+                if (k === 'ABC') {
+                    vkState.layout = 'alpha';
+                    document.getElementById('syspago-vkbd').classList.remove('numeric');
+                    buildKeyboard();
+                    return;
+                }
+                // normal char
+                const key = k;
+                const toInsert = (vkState.shift && key.length === 1 && key.match(/^[a-z]$/)) ? key.toUpperCase() : key;
+                insertTextAtCursor(active, toInsert);
+            });
+        }
+        
         container.innerHTML = '';
         const layout = vkState.layout === 'numeric' ? LAYOUTS.numeric : LAYOUTS.alpha;
         layout.forEach(row => {
@@ -3540,53 +3649,7 @@ window.hideInitialSplash = function () {
                 })(key);
                 keyEl.textContent = (vkState.shift && /^[a-z]$/.test(key) ? key.toUpperCase() : display);
                 keyEl.dataset.key = key;
-                // Prevenir cambio de foco en mousedown
-                keyEl.addEventListener('mousedown', (ev) => {
-                    ev.preventDefault();
-                });
-                // click handler
-                keyEl.addEventListener('click', (ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    const k = keyEl.dataset.key;
-                    const active = vkState.activeEl;
-                    if (!active) return;
-                    if (k === 'shift') {
-                        vkState.shift = !vkState.shift;
-                        buildKeyboard();
-                        return;
-                    }
-                    if (k === 'backspace') {
-                        doBackspace(active);
-                        return;
-                    }
-                    if (k === 'enter') {
-                        commitEnter(active);
-                        return;
-                    }
-                    if (k === 'space') {
-                        insertTextAtCursor(active, ' ');
-                        return;
-                    }
-                    if (k === '123') {
-                        vkState.layout = 'numeric';
-                        const kbd = document.getElementById('syspago-vkbd');
-                        if (kbd) {
-                            kbd.classList.add('numeric');
-                        }
-                        buildKeyboard();
-                        return;
-                    }
-                    if (k === 'ABC') {
-                        vkState.layout = 'alpha';
-                        document.getElementById('syspago-vkbd').classList.remove('numeric');
-                        buildKeyboard();
-                        return;
-                    }
-                    // normal char
-                    const toInsert = (vkState.shift && key.length === 1 && key.match(/^[a-z]$/)) ? key.toUpperCase() : key;
-                    insertTextAtCursor(active, toInsert);
-                });
+                // Ya no necesitamos listeners individuales, usamos delegación
                 rowEl.appendChild(keyEl);
             });
             container.appendChild(rowEl);
