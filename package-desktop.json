@@ -1,0 +1,31 @@
+{
+  "name": "syspago-desktop",
+  "version": "1.0.0",
+  "description": "SYSPAGO TPV - Aplicación de Escritorio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "devDependencies": {
+    "electron": "^latest",
+    "electron-builder": "^latest"
+  },
+  "build": {
+    "appId": "com.systienda.syspago",
+    "productName": "SYSPAGO TPV",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!dist"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icons/icon.ico"
+    }
+  }
+}

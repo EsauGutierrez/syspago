@@ -79,6 +79,11 @@ const state = {
     quickEntryValue: '0',
     quickEntryPrice: 0,
     quickEntryName: 'Artículo Rápido',
+    // Estado para el teclado de cobro directo (Syspago)
+    directPayAmount: 0,
+    directPayCommission: { type: 'percentage', value: 0 },
+    directPayDisplay: '0.0',
+    activeInput: 'display', // 'display' o 'commission'
     topupSelectedOperator: null, // operador seleccionado
     topupSelectedPlan: null,     // plan seleccionado (se mostrará en confirmación)
     selectedService: null,       // servicio seleccionado en el menú de Servicios
@@ -96,25 +101,25 @@ const state = {
 const topUpOperators = [
     { name: "AT&T", icon: '<svg class="w-6 h-6 text-red-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M5 7h14"/></svg>' },
     { name: "Bait", icon: '<svg class="w-6 h-6 text-pink-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v8"/></svg>' },
-    { name: "Movistar", icon: '<svg class="w-6 h-6 text-green-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12c4-8 8-8 10 0 2-8 6-8 8 0"/></svg>' },
-    { name: "Telcel", icon: '<svg class="w-6 h-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8"/></svg>' },
+    { name: "Movistar", icon: '<img src="icons/recargas/MOVISTAR.svg" class="w-6 h-6" alt="Movistar">' },
+    { name: "Telcel", icon: '<img src="icons/recargas/LOGO TELCEL.svg" class="w-6 h-6" alt="Telcel">' },
     { name: "Telmex", icon: '<svg class="w-6 h-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>' },
-    { name: "Unefon", icon: '<svg class="w-6 h-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><circle cx="12" cy="12" r="3"/></svg>' },
-    { name: "Virgin Mobile", icon: '<svg class="w-6 h-6 text-purple-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><path d="M12 3v18"/></svg>' }
+    { name: "Unefon", icon: '<img src="icons/recargas/UNEFON.svg" class="w-6 h-6" alt="Unefon">' },
+    { name: "Virgin Mobile", icon: '<img src="icons/recargas/LOGO VIRGIN.svg" class="w-6 h-6" alt="Virgin Mobile">' }
 ];
 
 // ----------------------
 // NUEVAS CATEGORÍAS DE SERVICIOS
 // ----------------------
 const serviceCategories = [
-    { name: "Agua y drenaje", icon: '<svg class="w-6 h-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s-4 5-4 8a4 4 0 1 0 8 0c0-3-4-8-4-8z"/><path d="M12 12v6"/></svg>' },
-    { name: "Catálogos", icon: '<svg class="w-6 h-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8"/></svg>' },
-    { name: "Gas y electricidad", icon: '<svg class="w-6 h-6 text-yellow-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6"/><path d="M6 10h12l-6 12z"/></svg>' },
-    { name: "Gobiernos", icon: '<svg class="w-6 h-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4-3 2-6-3-6 3-3-2 9-4z"/><path d="M3 10v7a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-7"/></svg>' },
-    { name: "Lotería", icon: '<svg class="w-6 h-6 text-pink-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/></svg>' },
-    { name: "Movilidad", icon: '<svg class="w-6 h-6 text-green-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><rect x="3" y="7" width="18" height="6" rx="2"/></svg>' },
-    { name: "Servicios digitales", icon: '<svg class="w-6 h-6 text-teal-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21h10"/></svg>' },
-    { name: "TV e internet", icon: '<svg class="w-6 h-6 text-blue-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M8 3l4 4 4-4"/></svg>' }
+    { name: "Agua y drenaje", icon: '<img src="icons/servicios/AGUA.svg" class="w-6 h-6" alt="Agua y drenaje">' },
+    { name: "Catálogos", icon: '<img src="icons/servicios/CATALOGOS.svg" class="w-6 h-6" alt="Catálogos">' },
+    { name: "Gas y electricidad", icon: '<img src="icons/servicios/gas y electricidad.svg" class="w-6 h-6" alt="Gas y electricidad">' },
+    { name: "Gobiernos", icon: '<img src="icons/servicios/gobierno.svg" class="w-6 h-6" alt="Gobiernos">' },
+    { name: "Lotería", icon: '<img src="icons/servicios/loteria.svg" class="w-6 h-6" alt="Lotería">' },
+    { name: "Movilidad", icon: '<img src="icons/servicios/movilidad.svg" class="w-6 h-6" alt="Movilidad">' },
+    { name: "Servicios digitales", icon: '<img src="icons/servicios/aplicaciones.svg" class="w-6 h-6" alt="Servicios digitales">' },
+    { name: "TV e internet", icon: '<img src="icons/servicios/tv e internet.svg" class="w-6 h-6" alt="TV e internet">' }
 ];
 
 // ----------------------
@@ -474,6 +479,240 @@ window.setCartTab = function (tab) {
     window.renderApp && window.renderApp();
 }
 
+// =====================
+// FUNCIONES PARA TECLADO NUMÉRICO DE COBRO DIRECTO
+// =====================
+
+// Función para agregar número (puede ser al display o al campo de comisión)
+window.addDirectPayNumber = function (number) {
+    if (state.activeInput === 'commission') {
+        // Agregar número al campo de comisión
+        const input = document.getElementById('commission-input');
+        if (input) {
+            if (input.value === '0' || input.value === '') {
+                input.value = number;
+            } else {
+                input.value += number;
+            }
+            input.focus();
+        }
+    } else {
+        // Agregar número al display principal
+        if (state.directPayDisplay === '0.0') {
+            state.directPayDisplay = number;
+        } else {
+            state.directPayDisplay += number;
+        }
+        state.directPayAmount = parseFloat(state.directPayDisplay) || 0;
+        updateDirectPayDisplay();
+    }
+}
+
+// Función para agregar punto decimal
+window.addDirectPayDecimal = function () {
+    if (state.activeInput === 'commission') {
+        // Agregar punto al campo de comisión
+        const input = document.getElementById('commission-input');
+        if (input && !input.value.includes('.')) {
+            if (input.value === '') {
+                input.value = '0.';
+            } else {
+                input.value += '.';
+            }
+            input.focus();
+        }
+    } else {
+        // Agregar punto al display principal
+        if (!state.directPayDisplay.includes('.')) {
+            state.directPayDisplay += '.';
+            updateDirectPayDisplay();
+        }
+    }
+}
+
+// Función para limpiar (display o campo de comisión)
+window.clearDirectPay = function () {
+    if (state.activeInput === 'commission') {
+        // Limpiar campo de comisión
+        const input = document.getElementById('commission-input');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+    } else {
+        // Limpiar display principal
+        state.directPayDisplay = '0.0';
+        state.directPayAmount = 0;
+        updateDirectPayDisplay();
+    }
+}
+
+// Función para actualizar el display visual
+function updateDirectPayDisplay() {
+    const displayEl = document.getElementById('direct-pay-display');
+    if (displayEl) {
+        displayEl.textContent = `$${state.directPayDisplay}`;
+    }
+}
+
+// Función para establecer tipo de comisión
+window.setDirectCommissionType = function (type) {
+    state.directPayCommission.type = type;
+    window.renderApp && window.renderApp();
+}
+
+// Función para aplicar comisión
+window.applyDirectCommission = function () {
+    const input = document.getElementById('commission-input');
+    if (input) {
+        const value = parseFloat(input.value) || 0;
+        state.directPayCommission.value = value;
+        window.showToast('Comisión aplicada correctamente', 'success');
+    }
+}
+
+// Función para limpiar el campo de comisión
+window.clearCommissionInput = function () {
+    const input = document.getElementById('commission-input');
+    if (input) {
+        input.value = '';
+        input.focus();
+        state.directPayCommission.value = 0;
+    }
+}
+
+// Función para establecer qué campo está activo
+window.setActiveInput = function (inputType) {
+    state.activeInput = inputType;
+    updateInputFocus();
+}
+
+// Función para actualizar el focus visual
+function updateInputFocus() {
+    const display = document.getElementById('direct-pay-display');
+    const commissionInput = document.getElementById('commission-input');
+    
+    if (display && commissionInput) {
+        if (state.activeInput === 'commission') {
+            display.style.border = '2px solid transparent';
+            commissionInput.style.border = '2px solid #3b82f6';
+            commissionInput.focus();
+        } else {
+            display.style.border = '2px solid #3b82f6';
+            commissionInput.style.border = '1px solid #d1d5db';
+        }
+    }
+}
+
+// Función para procesar pago directo
+window.processDirectPayment = function () {
+    if (state.directPayAmount <= 0) {
+        window.showToast("Ingrese un monto válido para cobrar.", 'error');
+        return;
+    }
+
+    // Calcular comisión
+    let commissionAmount = 0;
+    if (state.directPayCommission.value > 0) {
+        if (state.directPayCommission.type === 'percentage') {
+            commissionAmount = (state.directPayAmount * state.directPayCommission.value) / 100;
+        } else {
+            commissionAmount = state.directPayCommission.value;
+        }
+    }
+
+    const totalAmount = state.directPayAmount + commissionAmount;
+
+    // Mostrar modal de confirmación/método de pago
+    window.showDirectPaymentModal(totalAmount, commissionAmount);
+}
+
+// Modal para seleccionar método de pago
+window.showDirectPaymentModal = function (total, commission) {
+    const modalHtml = `
+        <div id="direct-payment-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Confirmar Cobro</h2>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-lg">
+                        <span>Monto:</span>
+                        <span class="font-semibold">$${state.directPayAmount.toFixed(2)}</span>
+                    </div>
+                    ${commission > 0 ? `
+                    <div class="flex justify-between text-lg text-red-600">
+                        <span>Comisión:</span>
+                        <span class="font-semibold">$${commission.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="flex justify-between text-xl font-bold text-green-700 border-t pt-2">
+                        <span>TOTAL:</span>
+                        <span>$${total.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button data-action="process-direct-cash" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">COBRAR EN EFECTIVO</button>
+                    <button data-action="process-direct-card" class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold">COBRAR CON TARJETA</button>
+                </div>
+
+                <button data-action="close-direct-modal" class="w-full mt-3 text-gray-600 py-2">Cancelar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Cerrar modal de pago directo
+window.closeDirectPaymentModal = function () {
+    const modal = document.getElementById('direct-payment-modal');
+    if (modal) modal.remove();
+}
+
+// Procesar pago directo en efectivo o tarjeta
+window.processDirectCash = function () {
+    finishDirectPayment('Efectivo');
+}
+
+window.processDirectCard = function () {
+    // Mostrar interfaz de lector de tarjeta
+    window.closeDirectPaymentModal();
+    if (window.openCardReaderView) {
+        const total = state.directPayAmount + (state.directPayCommission.type === 'percentage' 
+            ? (state.directPayAmount * state.directPayCommission.value) / 100 
+            : state.directPayCommission.value);
+        window.openCardReaderView({ total });
+    }
+}
+
+function finishDirectPayment(method) {
+    const commissionAmount = state.directPayCommission.type === 'percentage' 
+        ? (state.directPayAmount * state.directPayCommission.value) / 100 
+        : state.directPayCommission.value;
+    
+    const totalAmount = state.directPayAmount + commissionAmount;
+
+    saveTransaction({
+        date: new Date(),
+        total: totalAmount,
+        subtotal: state.directPayAmount,
+        commission: { ...state.directPayCommission, amount: commissionAmount },
+        items: [{ name: 'Cobro Directo', price: state.directPayAmount, quantity: 1 }],
+        paymentMethod: method,
+        status: 'Completed'
+    });
+
+    window.closeDirectPaymentModal();
+    window.showToast(`Cobro de $${totalAmount.toFixed(2)} procesado exitosamente`, 'success');
+    
+    // Limpiar estado
+    state.directPayDisplay = '0.0';
+    state.directPayAmount = 0;
+    state.directPayCommission = { type: 'percentage', value: 0 };
+    
+    window.renderApp && window.renderApp();
+}
 
 // ----------------- NUEVA FUNCIÓN: Toast de notificación -----------------
 // Pegar esta función en js/app.js en la sección de utilidades globales (fuera de otras funciones)
@@ -725,8 +964,7 @@ function renderCartView() {
                         <button onclick="setCartTab('quick')" class="px-4 py-2 text-sm font-medium ${state.activeCartTab === 'quick' ? 'text-gray-900' : 'text-gray-600'}">Venta Rápida</button>
                         <button onclick="setCartTab('search')" class="px-4 py-2 text-sm font-medium ${state.activeCartTab === 'search' ? 'text-gray-900' : 'text-gray-600'}">Buscar Productos</button>
                         <button onclick="setCartTab('generic')" class="px-4 py-2 text-sm font-medium ${state.activeCartTab === 'generic' ? 'text-gray-900' : 'text-gray-600'}">Producto genérico</button>
-                    </div>
-                    <div class="h-1 w-28 ${state.activeCartTab === 'quick' ? 'bg-blue-600' : state.activeCartTab === 'search' ? 'bg-blue-600' : state.activeCartTab === 'generic' ? 'bg-blue-600' : ''} rounded"></div>
+                    </div>                   
                 </div>
             </div>
         `;
@@ -1298,34 +1536,126 @@ function renderCheckoutView() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) return;
 
-    const commissionLabel = state.commission.type === 'percentage' ? `Comisión (${state.commission.value}%)` : `Comisión (Fija)`;
-
     const checkoutHtml = `
-        <h2 class="text-2xl font-bold mb-4 text-blue-700">Syspago | Generar Cobro</h2>
-        <div class="bg-white p-6 rounded-xl shadow-lg border space-y-4">
-            <div class="space-y-2 border-b pb-4">
-                <div class="flex justify-between text-lg text-gray-700">
-                    <span>Subtotal de Artículos:</span>
-                    <span class="font-semibold">${window.formatCurrency(state.subtotal)}</span>
+        <!-- Display del monto -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg mb-4 shadow-lg cursor-pointer transition-all duration-200" data-action="focus-display">
+            <div class="text-right">
+                <div class="text-4xl font-bold text-white" id="direct-pay-display">$${state.directPayDisplay}</div>
+                <div class="text-sm text-blue-100 mt-1">Toca para ingresar monto principal</div>
+            </div>
+        </div>
+
+        <!-- Teclado numérico -->
+        <div class="bg-white rounded-xl p-4 shadow-lg mb-4">
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <!-- Fila 1 -->
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="1">1</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="2">2</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="3">3</button>
+                
+                <!-- Fila 2 -->
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="4">4</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="5">5</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="6">6</button>
+                
+                <!-- Fila 3 -->
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="7">7</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="8">8</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="9">9</button>
+                
+                <!-- Fila 4 -->
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-decimal">.</button>
+                <button class="keypad-btn bg-gray-100 hover:bg-gray-200 text-2xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-number" data-number="0">0</button>
+                <button class="keypad-btn bg-red-100 hover:bg-red-200 text-red-600 text-xl font-semibold p-4 rounded-lg shadow-sm transition" data-action="keypad-clear">
+                    <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Botón de cobrar -->
+        <button class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold py-4 rounded-lg shadow-lg transition mb-4" data-action="process-direct-payment">
+            COBRAR $
+        </button>
+
+        <!-- Sección de comisión -->
+        <div class="bg-white rounded-xl p-4 shadow-lg">
+            <h3 class="text-lg font-semibold mb-3 text-gray-800">Comisión</h3>
+            <div class="flex space-x-2 mb-3">
+                <button class="flex-1 py-2 px-4 rounded-lg font-medium transition ${state.directPayCommission.type === 'percentage' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}" data-action="set-commission-type" data-type="percentage">%</button>
+                <button class="flex-1 py-2 px-4 rounded-lg font-medium transition ${state.directPayCommission.type === 'fixed' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}" data-action="set-commission-type" data-type="fixed">$</button>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="flex-1 relative">
+                    <input type="text" id="commission-input" class="w-full p-2 border border-gray-300 rounded-lg pr-10 transition-all duration-200" placeholder="0" value="${state.directPayCommission.value}" inputmode="decimal" data-action="focus-commission">
+                    <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-600 transition" data-action="clear-commission" title="Limpiar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
-                <div class="flex justify-between text-lg text-red-600">
-                    <span>${commissionLabel}:</span>
-                    <span class="font-semibold">${window.formatCurrency(state.commission.amount)}</span>
-                </div>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition" data-action="apply-direct-commission">GUARDAR</button>
             </div>
-            <div class="flex justify-between items-center text-3xl font-extrabold text-green-700">
-                <span>TOTAL A COBRAR:</span>
-                <span>${window.formatCurrency(state.total)}</span>
-            </div>
-            <button data-action="open-commission-modal" class="w-full bg-yellow-100 text-yellow-800 py-3 rounded-lg font-bold">Aplicar Comisión</button>
-            <div class="pt-4 space-y-3">
-                <button data-action="process-payment" data-method="Efectivo" class="w-full bg-green-600 text-white py-4 rounded-lg font-extrabold text-xl">COBRAR EN EFECTIVO</button>
-                <button data-action="process-payment" data-method="Tarjeta" class="w-full bg-purple-600 text-white py-4 rounded-lg font-extrabold text-xl">COBRAR CON TARJETA</button>
-            </div>
-            ${state.cart.length === 0 ? '<p class="text-center text-red-500 mt-4">No hay artículos para cobrar.</p>' : ''}
+            <div class="text-xs text-gray-500 mt-2">Toca el campo para ingresar comisión con el teclado</div>
         </div>
     `;
     mainContent.innerHTML = checkoutHtml;
+
+    // Inicializar estado y event listeners específicos para esta vista
+    setTimeout(() => {
+        // Establecer foco inicial en el display
+        state.activeInput = 'display';
+        updateInputFocus();
+
+        const commissionInput = document.getElementById('commission-input');
+        if (commissionInput) {
+            // Permitir solo números y punto decimal
+            commissionInput.addEventListener('input', (e) => {
+                let value = e.target.value;
+                value = value.replace(/[^0-9.]/g, '');
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                e.target.value = value;
+            });
+
+            // Seleccionar todo al hacer focus y cambiar input activo
+            commissionInput.addEventListener('focus', (e) => {
+                state.activeInput = 'commission';
+                updateInputFocus();
+                setTimeout(() => e.target.select(), 10);
+            });
+
+            // Detectar clic en el campo para cambiar foco
+            commissionInput.addEventListener('click', () => {
+                state.activeInput = 'commission';
+                updateInputFocus();
+            });
+
+            // Mejorar navegación con teclado
+            commissionInput.addEventListener('keydown', (e) => {
+                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight'];
+                if (allowedKeys.includes(e.key) ||
+                    (e.ctrlKey && ['a', 'c', 'v', 'x'].includes(e.key)) ||
+                    (!e.shiftKey && e.key >= '0' && e.key <= '9') ||
+                    e.key === '.') {
+                    return;
+                }
+                e.preventDefault();
+            });
+        }
+
+        // Event listener para el display principal
+        const display = document.getElementById('direct-pay-display');
+        if (display) {
+            display.parentElement.addEventListener('click', () => {
+                state.activeInput = 'display';
+                updateInputFocus();
+            });
+        }
+    }, 100);
 }
 
 function renderMovementsView() {
@@ -1548,7 +1878,7 @@ window.renderHeader = function () {
     if (!header) return;
 
     const title = getMenuTitle(state.currentView);
-    const companyLogo = `<svg class="w-8 h-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg>`;
+    const companyLogo = `<img src="icons/servicios/LOGO SYSTIENDA solo carrito.svg" class="w-8 h-8" alt="SYSTIENDA">`;
 
     // Mostrar botón atrás solo en vistas internas (detalles / formularios)
     const internalViews = new Set(['topup-plans', 'topup-plan-confirm', 'topup-form', 'service-providers', 'payment-form', 'checkout', 'movements']);
@@ -1563,7 +1893,6 @@ window.renderHeader = function () {
 
                 <div class="flex-shrink-0">${companyLogo}</div>
                 <div class="text-center">
-                    <div class="text-xs text-gray-500">[Empresa]</div>
                     <div class="text-2xl font-semibold text-gray-800">${title}</div>
                 </div>
 
@@ -1946,6 +2275,59 @@ function setupEventListeners() {
                 window.addQuickItem && window.addQuickItem();
                 break;
             }
+
+            // === CASOS PARA TECLADO NUMÉRICO DE COBRO DIRECTO ===
+            case 'keypad-number': {
+                const number = target.getAttribute('data-number');
+                if (number) window.addDirectPayNumber(number);
+                break;
+            }
+            case 'keypad-decimal': {
+                window.addDirectPayDecimal();
+                break;
+            }
+            case 'keypad-clear': {
+                window.clearDirectPay();
+                break;
+            }
+            case 'process-direct-payment': {
+                window.processDirectPayment();
+                break;
+            }
+            case 'set-commission-type': {
+                const type = target.getAttribute('data-type');
+                if (type) window.setDirectCommissionType(type);
+                break;
+            }
+            case 'apply-direct-commission': {
+                window.applyDirectCommission();
+                break;
+            }
+            case 'clear-commission': {
+                window.clearCommissionInput();
+                break;
+            }
+            case 'close-direct-modal': {
+                window.closeDirectPaymentModal();
+                break;
+            }
+            case 'process-direct-cash': {
+                window.processDirectCash();
+                break;
+            }
+            case 'process-direct-card': {
+                window.processDirectCard();
+                break;
+            }
+            case 'focus-display': {
+                window.setActiveInput('display');
+                break;
+            }
+            case 'focus-commission': {
+                window.setActiveInput('commission');
+                break;
+            }
+
             // fallback: teclado numérico
             default:
                 if (key) window.processQuickEntry && window.processQuickEntry(key);
@@ -1958,6 +2340,46 @@ function setupEventListeners() {
     const fixed = document.getElementById('commission-fixed');
     if (perc) perc.addEventListener('input', window.updateModalCommissionAmount);
     if (fixed) fixed.addEventListener('input', window.updateModalCommissionAmount);
+
+    // Listener para el campo de comisión de cobro directo
+    const commissionInput = document.getElementById('commission-input');
+    if (commissionInput) {
+        // Permitir solo números y punto decimal
+        commissionInput.addEventListener('input', (e) => {
+            let value = e.target.value;
+            // Remover caracteres no válidos (solo números y punto)
+            value = value.replace(/[^0-9.]/g, '');
+            // Permitir solo un punto decimal
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            e.target.value = value;
+        });
+
+        // Seleccionar todo el texto al hacer focus
+        commissionInput.addEventListener('focus', (e) => {
+            setTimeout(() => e.target.select(), 10);
+        });
+
+        // Permitir delete/backspace para funcionalidad normal
+        commissionInput.addEventListener('keydown', (e) => {
+            // Permitir teclas de navegación y edición
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'Clear', 'Copy', 'Paste'];
+            if (allowedKeys.indexOf(e.key) !== -1 ||
+                // Permitir Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.key === 'a' && e.ctrlKey === true) ||
+                (e.key === 'c' && e.ctrlKey === true) ||
+                (e.key === 'v' && e.ctrlKey === true) ||
+                (e.key === 'x' && e.ctrlKey === true)) {
+                return;
+            }
+            // Permitir números y punto decimal
+            if ((e.shiftKey || (e.key < '0' || e.key > '9')) && e.key !== '.') {
+                e.preventDefault();
+            }
+        });
+    }
 }
 
 // asegurar inicialización (llamarlo al final del archivo si no está siendo llamado)
@@ -2420,14 +2842,8 @@ window.openCardReaderView = function (options = {}) {
                     <!-- logo -->
                     <div style="font-weight:700; font-size:28px; color:#2b6cb0; margin-bottom:8px;">SYSpago</div>
 
-                    <!-- icono del lector -->
-                    <div style="width:140px; height:160px; margin:0 auto 10px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                        <svg width="100" height="120" viewBox="0 0 24 24" fill="none" stroke="#d13a3a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="12" height="18" rx="1.5"></rect>
-                            <circle cx="7.5" cy="8" r="0.6" fill="#d13a3a"></circle>
-                            <circle cx="11.5" cy="8" r="0.6" fill="#d13a3a"></circle>
-                            <rect x="6" y="12" width="7" height="2" rx="0.5"></rect>
-                        </svg>
+                    <!-- imagen de fondo con sensor de pago -->
+                    <div style="width:200px; height:200px; margin:0 auto 10px; border-radius:12px; display:flex; align-items:center; justify-content:center; background-image:url('icons/fondo de pago con sensor.png'); background-size:contain; background-repeat:no-repeat; background-position:center;">
                     </div>
                 </div>
 
