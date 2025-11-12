@@ -1,147 +1,158 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPV Móvil | Punto de Venta</title>
-    <!-- Carga de Tailwind CSS (CDN) -->
+    <title>Bienvenido a SYSpago</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Enlace a estilos personalizados -->
-    <link rel="stylesheet" href="css/styles.css">
-    <!-- Iconos de Lucide: se usarán como SVG inline -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .welcome-container {
+            background: #f5f5f5;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo-container {
+            margin-bottom: 60px;
+            padding: 0;
+        }
+        
+        .logo {
+            max-width: 280px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .tiles-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 60px;
+            flex-wrap: wrap;
+        }
+        
+        .tile {
+            background: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            min-width: 100px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .tile-icon {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tile-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        @media (max-width: 640px) {
+            .welcome-container {
+                padding: 40px 20px;
+            }
+            
+            .welcome-title {
+                font-size: 2rem;
+            }
+            
+            .tiles-container {
+                gap: 15px;
+            }
+            
+            .tile {
+                min-width: 100px;
+                padding: 15px;
+            }
+        }
+    </style>
 </head>
-
 <body>
-    <div id="app-container">
-
-        <!-- HEADER: título y logo dinámico -->
-        <header id="app-header" class="bg-white border-b shadow-sm p-3">
-            <!-- contenido dinámico generado por app.js -->
-        </header>
-
-        <!-- MAIN CONTENT (Vistas Intercambiables) -->
-        <main id="main-content" class="flex-grow p-4 overflow-y-auto">
-            <!-- La vista activa se inyectará aquí -->
-        </main>
-
-        <!-- MODAL DE COMISIÓN -->
-        <div id="commission-modal"
-            class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 hidden flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">Aplicar Comisión</h2>
-
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Tipo de Comisión:</label>
-                    <div class="mt-1 flex space-x-4">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="commissionType" value="percentage" checked
-                                data-action="toggle-commission" class="form-radio text-blue-600 rounded-full">
-                            <span class="ml-2 text-gray-700">Porcentaje (%)</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="commissionType" value="fixed" data-action="toggle-commission"
-                                class="form-radio text-blue-600 rounded-full">
-                            <span class="ml-2 text-gray-700">Importe Fijo ($)</span>
-                        </label>
-                    </div>
+    <div class="welcome-container">
+        <!-- Tiles de opciones principales (en la parte superior) -->
+        <div class="tiles-container">
+            <div class="tile" onclick="goToApp('cart')">
+                <div class="tile-icon">
+                    <img src="icons/servicios/LOGO SYSTIENDA solo carrito.svg" width="24" height="24" alt="PV Cloud" style="color: #ef4444;">
                 </div>
-
-                <div id="commission-percentage-group">
-                    <label for="commission-percentage" class="block text-sm font-medium text-gray-700">Porcentaje
-                        (%)</label>
-                    <input type="number" id="commission-percentage" min="0" max="100" value="0" placeholder="Ej: 5"
-                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                <div class="tile-label">PV Cloud</div>
+            </div>
+            
+            <div class="tile" onclick="goToApp('cart')">
+                <div class="tile-icon">
+                    <img src="icons/servicios/LOGO SYSTIENDA solo carrito.svg" width="24" height="24" alt="Systienda" style="color: #ef4444;">
                 </div>
-
-                <div id="commission-fixed-group" class="hidden">
-                    <label for="commission-fixed" class="block text-sm font-medium text-gray-700">Importe Fijo
-                        ($)</label>
-                    <input type="number" id="commission-fixed" min="0" value="0" placeholder="Ej: 10.50"
-                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
-                </div>
-
-                <div id="commission-result" class="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
-                    Comisión Calculada: <span id="modal-commission-amount" class="font-bold">$0.00</span>
-                </div>
-
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button data-action="close-commission-modal"
-                        class="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition">Cancelar</button>
-                    <button data-action="apply-commission"
-                        class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition">Aplicar</button>
-                </div>
+                <div class="tile-label">Systienda</div>
             </div>
         </div>
-
-        <!-- BOTTOM NAVIGATION BAR (Footer Fijo) -->
-        <footer id="bottom-bar" class="fixed bottom-0 left-0 right-0 w-full bg-white border-t shadow-lg z-20"">
-            <div class=" flex justify-around items-center h-16">
-            <!-- 1. Recargas (topup) -->
-            <button class="btn-action" data-view="topup" data-action="change-view">
-                <img src="icons/PRINCIPALES 1.svg" width="24" height="24" alt="Recargas">
-                <span class="text-xs mt-1">Recargas</span>
-            </button>
-
-            <!-- 2. Servicios (payment) -->
-            <button class="btn-action" data-view="payment" data-action="change-view">
-                <img src="icons/PRINCIPALES 3.svg" width="24" height="24" alt="Servicios">
-                <span class="text-xs mt-1">Servicios</span>
-            </button>
-
-            <!-- 3. Syspago (checkout para simular una función de pago/cobro directo) -->
-            <button class="btn-action" data-view="checkout" data-action="change-view">
-                <img src="icons/PRINCIPAL 4.svg" width="24" height="24" alt="Syspago">
-                <span class="text-xs mt-1">Syspago</span>
-            </button>
-
-            <!-- 4. Movim (Nueva vista, usando un icono de historial) -->
-            <button class="btn-action" data-view="movements" data-action="change-view">
-                <img src="icons/PRINCIPALES 5.svg" width="24" height="24" alt="Movimientos">
-                <span class="text-xs mt-1">Movim</span>
-            </button>
-
-            <!-- 5. PV Venta (PV venta / Carrito de compras - activa por defecto) -->
-            <button class="btn-action active" data-view="cart" data-action="change-view">
-                <img src="icons/PRINCIPALES 2.svg" width="24" height="24" alt="PV Venta">
-                <span class="text-xs mt-1">PV Venta</span>
-            </button>
-    </div>
-    </footer>
-
+        
+        <!-- Logo de SYSpago (en la parte inferior, más grande) -->
+        <div class="logo-container">
+            <img src="icons/logotipoSYSpago.png" alt="SYSpago Logo" class="logo" onerror="console.error('Error cargando logo:', this.src)" onload="console.log('✅ Logo SYSpago cargado exitosamente')">
+        </div>
     </div>
 
-    <!-- Enlace a JavaScript (¡Importante: type="module"!) -->
-    <script type="module" src="js/app.js"></script>
     <script>
-        // Este script escucha los clics en la barra inferior (Footer)
+        function goToApp(view = 'cart') {
+            // Redirect to main app with specific view
+            const url = view ? `app.html#${view}` : 'app.html';
+            window.location.href = url;
+        }
+        
+        // Add some interactive effects
         document.addEventListener('DOMContentLoaded', () => {
-            const bottomBar = document.getElementById('bottom-bar');
-            if (bottomBar) {
-                bottomBar.addEventListener('click', (event) => {
-                    const button = event.target.closest('[data-action="change-view"]');
-                    if (button) {
-                        const viewName = button.getAttribute('data-view');
-                        // Llama a la función changeView que está en el ámbito global (window) del módulo js/app.js
-                        if (window.changeView) {
-                            window.changeView(viewName);
-                        }
-                    }
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                tile.addEventListener('mouseenter', () => {
+                    tile.style.transform = 'translateY(-3px) scale(1.02)';
                 });
-            }
-
-            // También adjuntamos listeners para el modal de comisión (ejemplo)
-            document.querySelector('[data-action="close-commission-modal"]')?.addEventListener('click', window.closeCommissionModal);
-            document.querySelector('[data-action="apply-commission"]')?.addEventListener('click', window.applyCommission);
-            document.querySelectorAll('[data-action="toggle-commission"]').forEach(radio => {
-                radio.addEventListener('change', (e) => window.toggleCommissionInput(e.target.value));
+                
+                tile.addEventListener('mouseleave', () => {
+                    tile.style.transform = 'translateY(0) scale(1)';
+                });
             });
-
-            // Listener de teclado (para el modal, si es necesario, se puede mover al JS)
-            document.getElementById('commission-percentage')?.addEventListener('input', window.updateModalCommissionAmount);
-            document.getElementById('commission-fixed')?.addEventListener('input', window.updateModalCommissionAmount);
         });
     </script>
 </body>
-
 </html>

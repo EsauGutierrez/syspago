@@ -1488,7 +1488,7 @@ function renderPaymentFormView() {
 
                 <div>
                     <label class="block text-sm text-gray-600 mb-2">Monto a pagar</label>
-                    <input id="service-amount" type="number" min="0.01" step="0.01" placeholder="$ Monto a pagar" class="w-full p-3 border rounded-lg text-lg" />
+                    <input id="service-amount" type="text" inputmode="decimal" placeholder="$ Monto a pagar" class="w-full p-3 border rounded-lg text-lg" />
                 </div>
 
                 <div class="text-sm text-gray-700">
@@ -1516,6 +1516,17 @@ function renderPaymentFormView() {
     const extraEl = document.getElementById('service-extra-charge');
 
     function updateTotal() {
+        // Validar que solo contenga números y decimales
+        if (amtEl && amtEl.value) {
+            const cleanValue = amtEl.value.replace(/[^0-9.]/g, '');
+            // Asegurar solo un punto decimal
+            const parts = cleanValue.split('.');
+            if (parts.length > 2) {
+                amtEl.value = parts[0] + '.' + parts.slice(1).join('');
+            } else {
+                amtEl.value = cleanValue;
+            }
+        }
         const v = parseFloat(amtEl?.value) || 0;
         const total = parseFloat((v + extraCharge).toFixed(2));
         if (totalEl) totalEl.textContent = window.formatCurrency(total);
@@ -1866,7 +1877,7 @@ function getMenuTitle(viewName) {
         case 'checkout': return 'Cobrar';
         case 'movements': return 'Movimientos';
         case 'cart': return 'PV Venta';
-        case 'syspago-menu': return 'Syspago'; // <- nueva vista de menú
+
         default: return 'Syspago';
     }
 }
@@ -1956,8 +1967,22 @@ function renderSettingsView() {
 
 // Asegúrate de que renderApp incluya la vista product-list
 window.renderApp = function () {
-    // render header en todas las vistas
-    window.renderHeader && window.renderHeader();
+    console.log('🚀 renderApp ejecutándose. Vista actual:', state.currentView);
+    
+    // render header en todas las vistas excepto en el menú inicial
+    if (state.currentView !== 'syspago-menu') {
+        window.renderHeader && window.renderHeader();
+    }
+
+    // Mostrar/ocultar bottom bar según la vista
+    const bottomBar = document.getElementById('bottom-bar');
+    if (bottomBar) {
+        if (state.currentView === 'syspago-menu') {
+            bottomBar.style.display = 'none';
+        } else {
+            bottomBar.style.display = 'block';
+        }
+    }
  
     switch (state.currentView) {
         case 'topup': renderTopupView(); break;
@@ -2083,13 +2108,16 @@ function setupEventListeners() {
             case 'sign-out': {
                 // Confirmar cierre de sesión
                 window.showMessageBox('Cerrar sesión', '¿Deseas cerrar sesión?', () => {
-                    // acción simple: volver al inicio y limpiar estado sensible si hace falta
+                    // Limpiar estado sensible
                     state.cart = [];
                     state.selectedService = null;
                     state.selectedProvider = null;
                     calculateTotals();
-                    window.changeView('cart');
                     window.showToast('Sesión cerrada.');
+                    // Redirigir a la pantalla de bienvenida
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
                 });
                 break;
             }
@@ -3274,167 +3302,14 @@ window.openPaymentSuccessView = window.openPaymentSuccessView || function (tx = 
 };
 
 
-// ====== Vista principal SYSpago (menu con PV Cloud / SyStienda) ======
-// Pega este bloque al final de js/app.js (fuera de otras funciones).
+// ====== Función showSyspagoMenu eliminada ======
+// Esta función causaba la pantalla intermedia con tiles PV Cloud/SyStienda
+// Ahora la navegación va directamente a la vista cart (PV Venta)
 
-window.showSyspagoMenu = function () {
-    const main = document.getElementById('main-content');
-    if (!main) return console.warn('No existe #main-content');
-
-    // estilos mínimos encapsulados (inline para no depender de CSS externo)
-    const style = `
-        <style id="syspago-menu-styles">
-        .syspago-menu { display:flex; flex-direction:column; align-items:center; padding:28px 16px; box-sizing:border-box; }
-        .syspago-tiles { display:flex; gap:22px; justify-content:center; margin-top:10px; margin-bottom:28px; }
-        .syspago-tile { width:108px; height:108px; background:#ffffff; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.07); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; border:1px solid rgba(0,0,0,0.04); text-align:center; padding:8px; }
-        .syspago-tile .icon { width:48px; height:48px; margin-bottom:8px; opacity:0.95; }
-        .syspago-tile .label { font-size:13px; color:#333; }
-        .syspago-logo { width:100%; display:flex; align-items:center; justify-content:center; margin-top:36px; }
-        .syspago-logo .big { font-weight:800; color:#1e40af; font-size:56px; letter-spacing:0.6px; }
-        @media (max-width:480px) {
-            .syspago-tiles { gap:12px; }
-            .syspago-tile { width:92px; height:92px; }
-            .syspago-logo .big { font-size:44px; }
-        }
-        </style>
-    `;
-
-    // Two tiles + big logo (SVG inline icons)
-    const html = `
-        ${document.getElementById('syspago-menu-styles') ? '' : style}
-        <div class="syspago-menu">
-            <div style="width:100%; max-width:760px;">
-                <div style="display:flex; justify-content:center;">
-                    <div class="syspago-tiles" role="navigation" aria-label="Syspago menu">
-                        <div class="syspago-tile" id="tile-pvcloud" title="PV Cloud">
-                            <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3" y="6" width="18" height="12" rx="2" fill="#fff" stroke="#2b6cb0" stroke-width="1.4"/>
-                                <path d="M7 9h10M7 13h6" stroke="#2b6cb0" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <div class="label">PV Cloud</div>
-                        </div>
-
-                        <div class="syspago-tile" id="tile-systienda" title="SyStienda">
-                            <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3.5" y="4" width="17" height="14" rx="2" fill="#fff" stroke="#c026d3" stroke-width="1.4"/>
-                                <path d="M6 10h12" stroke="#c026d3" stroke-width="1.4" stroke-linecap="round"/>
-                            </svg>
-                            <div class="label">SyStienda</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="syspago-logo" aria-hidden="true">
-                <!-- Logo grande: si tienes una imagen real, reemplaza por <img src="ruta/logo.png"> -->
-                <div style="display:flex; align-items:center; gap:14px;">
-                    <svg width="84" height="56" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <g fill="none" fill-rule="evenodd">
-                            <text x="0" y="43" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" fill="#ef4444">SYS</text>
-                            <text x="78" y="43" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" fill="#1e40af">pago</text>
-                        </g>
-                    </svg>
-                </div>
-            </div>
-        </div>
-    `;
-
-    main.innerHTML = html;
-
-    // handlers: usa changeView si existe; si no, expón la acción deseada (puedes ajustar)
-    const tilePv = document.getElementById('tile-pvcloud');
-    const tileTi = document.getElementById('tile-systienda');
-
-    if (tilePv) tilePv.addEventListener('click', () => {
-        // ejemplo: abrir vista de venta (cart / pv)
-        if (typeof window.changeView === 'function') window.changeView('cart');
-        else if (typeof window.showPVCloud === 'function') window.showPVCloud();
-    });
-
-    if (tileTi) tileTi.addEventListener('click', () => {
-        // ejemplo: abrir otra vista (topup / tienda)
-        if (typeof window.changeView === 'function') window.changeView('topup');
-        else if (typeof window.showSyStienda === 'function') window.showSyStienda();
-    });
-};
-
-// Opcional: activar automáticamente al inicio (descomenta si quieres que sea la vista por defecto)
-state.currentView = 'syspago-menu';
-window.showSyspagoMenu();
+// Vista por defecto cambiada a cart (PV Venta)
+// La pantalla de bienvenida ahora está en welcome.html
 
 
-
-// === SPLASH / PANTALLA INICIAL (PV Cloud / SyStienda) ===
-// Pegar al final de js/app.js (fuera de otras funciones)
-
-window.showInitialSplash = function () {
-    try {
-        if (document.getElementById('syspago-splash')) return;
-        const splash = document.createElement('div');
-        splash.id = 'syspago-splash';
-        splash.className = 'syspago-splash';
-        splash.innerHTML = `
-            <div class="tiles" role="navigation" aria-label="Seleccionar App">
-                <div class="tile" id="splash-pvcloud" title="PV Cloud">
-                    <img class="icon" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 200 200'><rect x='18' y='36' width='164' height='128' rx='12' fill='%23ffffff' stroke='%232b6cb0' stroke-width='6'/><path d='M62 86h76M62 118h42' stroke='%232b6cb0' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>" alt="PV Cloud" />
-                    <div class="label">PV Cloud</div>
-                </div>
-                <div class="tile" id="splash-systienda" title="SyStienda">
-                    <img class="icon" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 200 200'><rect x='18' y='36' width='164' height='128' rx='12' fill='%23ffffff' stroke='%23c026d3' stroke-width='6'/><path d='M56 104h88' stroke='%23c026d3' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>" alt="SyStienda" />
-                    <div class="label">SyStienda</div>
-                </div>
-            </div>
-
-            <div class="logo" aria-hidden="true">
-                <!-- Logo grande: si prefieres usar una imagen real reemplaza por <img src="ruta/logo.png"> -->
-                <svg width="220" height="80" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <g fill="none" fill-rule="evenodd">
-                        <text x="0" y="43" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" fill="#ef4444">SYS</text>
-                        <text x="78" y="43" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" fill="#1e40af">pago</text>
-                    </g>
-                </svg>
-            </div>
-        `;
-        document.body.appendChild(splash);
-
-        // Handlers
-        const pvBtn = document.getElementById('splash-pvcloud');
-        const stBtn = document.getElementById('splash-systienda');
-
-        function hideAndNavigate(toView) {
-            try {
-                window.hideInitialSplash();
-                // guardar en estado (opcional)
-                window.state = window.state || {};
-                window.state.selectedApp = toView;
-                // Navegar a la vista solicitada; si no existe changeView, usamos renderApp y forzamos cart
-                if (typeof window.changeView === 'function') {
-                    window.changeView(toView);
-                } else {
-                    if (toView === 'cart') {
-                        window.state.currentView = 'cart';
-                    } else if (toView === 'topup') {
-                        window.state.currentView = 'topup';
-                    }
-                    if (typeof window.renderApp === 'function') window.renderApp();
-                }
-            } catch (e) {
-                console.error('hideAndNavigate error', e);
-            }
-        }
-
-
-
-        if (pvBtn) pvBtn.addEventListener('click', () => hideAndNavigate('cart'));
-        if (stBtn) stBtn.addEventListener('click', () => hideAndNavigate('topup'));
-
-        // Prevent keyboard scroll on splash (mobile)
-        splash.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-    } catch (err) {
-        console.error('showInitialSplash error', err);
-    }
-
-};
 
 window.hideInitialSplash = function () {
     try {
@@ -3445,19 +3320,6 @@ window.hideInitialSplash = function () {
     }
 };
 
-// Mostrar splash automáticamente al inicio (antes de interacción)
-try {
-    // si DOM ya listo, mostrar ahora; si no, hacerlo en DOMContentLoaded
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        window.showInitialSplash && window.showInitialSplash();
-    } else {
-        window.addEventListener('DOMContentLoaded', () => {
-            window.showInitialSplash && window.showInitialSplash();
-        });
-    }
-} catch (e) {
-    console.error('init splash error', e);
-}
 
 
 // === TECLADO VIRTUAL ON-SCREEN PARA DESKTOP TOUCH ===
@@ -3516,7 +3378,8 @@ try {
         visible: false,
         layout: 'alpha',
         shift: false,
-        activeEl: null
+        activeEl: null,
+        changingLayout: false  // Flag para evitar reset durante cambio de layout
     };
 
     // helpers para focus / insert
@@ -3662,6 +3525,7 @@ try {
                 const keyEl = document.createElement('button');
                 keyEl.type = 'button';
                 keyEl.className = 'vk-key';
+                keyEl.tabIndex = -1; // Evitar que el botón reciba foco
                 // wide keys
                 if (key === 'space') keyEl.classList.add('wider');
                 if (key === 'enter' || key === 'shift' || key === 'backspace' || key === '123' || key === 'ABC') keyEl.classList.add('wide', 'secondary');
@@ -3676,6 +3540,10 @@ try {
                 })(key);
                 keyEl.textContent = (vkState.shift && /^[a-z]$/.test(key) ? key.toUpperCase() : display);
                 keyEl.dataset.key = key;
+                // Prevenir cambio de foco en mousedown
+                keyEl.addEventListener('mousedown', (ev) => {
+                    ev.preventDefault();
+                });
                 // click handler
                 keyEl.addEventListener('click', (ev) => {
                     ev.preventDefault();
@@ -3702,7 +3570,10 @@ try {
                     }
                     if (k === '123') {
                         vkState.layout = 'numeric';
-                        document.getElementById('syspago-vkbd').classList.add('numeric');
+                        const kbd = document.getElementById('syspago-vkbd');
+                        if (kbd) {
+                            kbd.classList.add('numeric');
+                        }
                         buildKeyboard();
                         return;
                     }
@@ -3729,8 +3600,12 @@ try {
         if (!kb) return;
         document.body.classList.remove('no-virtual-keyboard');
         kb.style.display = 'block';
+        const wasVisible = vkState.visible;
         vkState.visible = true;
-        buildKeyboard();
+        // Solo reconstruir el teclado si no estaba visible antes
+        if (!wasVisible) {
+            buildKeyboard();
+        }
     }
     function hideVKBD() {
         const kb = document.getElementById('syspago-vkbd');

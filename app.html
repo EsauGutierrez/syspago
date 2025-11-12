@@ -23,28 +23,6 @@
         <!-- MAIN CONTENT (Vistas Intercambiables) -->
         <main id="main-content" class="flex-grow p-4 overflow-y-auto">
             <!-- La vista activa se inyectará aquí -->
-
-            <!-- NUEVA SECCIÓN: MENÚ DE SERVICIOS -->
-            <section id="services-menu" class="mt-6">
-                <h2 class="text-xl font-bold flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    </svg>
-                    Servicios
-                </h2>
-                <ul class="mt-4 space-y-2">
-                    <li class="text-gray-700">Agua y drenaje</li>
-                    <li class="text-gray-700">Catálogos</li>
-                    <li class="text-gray-700">Gas y electricidad</li>
-                    <li class="text-gray-700">Gobiernos</li>
-                    <li class="text-gray-700">Lotería</li>
-                    <li class="text-gray-700">Movilidad</li>
-                    <li class="text-gray-700">Servicios digitales</li>
-                    <li class="text-gray-700">TV e internet</li>
-                </ul>
-            </section>
-            <!-- FIN DE LA SECCIÓN DE SERVICIOS -->
-
         </main>
 
         <!-- MODAL DE COMISIÓN -->
@@ -98,63 +76,38 @@
 
         <!-- BOTTOM NAVIGATION BAR (Footer Fijo) -->
         <footer id="bottom-bar" class="fixed bottom-0 left-0 right-0 w-full bg-white border-t shadow-lg z-20">
-            <div class="flex justify-around items-center h-16">
-                <!-- 1. Recargas (topup) -->
-                <button class="btn-action" data-view="topup" data-action="change-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                        <path d="M12 7v8" />
-                        <path d="M10 10l2-3l2 3" />
-                    </svg>
-                    <span class="text-xs mt-1">Recargas</span>
-                </button>
+            <div class=" flex justify-around items-center h-16">
+            <!-- 1. Recargas (topup) -->
+            <button class="btn-action" data-view="topup" data-action="change-view">
+                <img src="icons/PRINCIPALES 1.svg" width="24" height="24" alt="Recargas">
+                <span class="text-xs mt-1">Recargas</span>
+            </button>
 
-                <!-- 2. Servicios (payment) -->
-                <button class="btn-action" data-view="payment" data-action="change-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                        <line x1="3" y1="10" x2="21" y2="10" />
-                        <line x1="16" y1="16" x2="16" y2="16" />
-                        <line x1="8" y1="16" x2="8" y1="16" />
-                    </svg>
-                    <span class="text-xs mt-1">Servicios</span>
-                </button>
+            <!-- 2. Servicios (payment) -->
+            <button class="btn-action" data-view="payment" data-action="change-view">
+                <img src="icons/PRINCIPALES 3.svg" width="24" height="24" alt="Servicios">
+                <span class="text-xs mt-1">Servicios</span>
+            </button>
 
-                <!-- 3. Syspago (checkout para simular una función de pago/cobro directo) -->
-                <button class="btn-action" data-view="checkout" data-action="change-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    </svg>
-                    <span class="text-xs mt-1">Syspago</span>
-                </button>
+            <!-- 3. Syspago (checkout para simular una función de pago/cobro directo) -->
+            <button class="btn-action" data-view="checkout" data-action="change-view">
+                <img src="icons/PRINCIPAL 4.svg" width="24" height="24" alt="Syspago">
+                <span class="text-xs mt-1">Syspago</span>
+            </button>
 
-                <!-- 4. Movim (Nueva vista, usando un icono de historial) -->
-                <button class="btn-action" data-view="movements" data-action="change-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="3" width="7" height="7" rx="1" />
-                        <rect x="14" y="14" width="7" height="7" rx="1" />
-                        <rect x="3" y="14" width="7" height="7" rx="1" />
-                    </svg>
-                    <span class="text-xs mt-1">Movim</span>
-                </button>
+            <!-- 4. Movim (Nueva vista, usando un icono de historial) -->
+            <button class="btn-action" data-view="movements" data-action="change-view">
+                <img src="icons/PRINCIPALES 5.svg" width="24" height="24" alt="Movimientos">
+                <span class="text-xs mt-1">Movim</span>
+            </button>
 
-                <!-- 5. PV Venta (PV venta / Carrito de compras - activa por defecto) -->
-                <button class="btn-action active" data-view="cart" data-action="change-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="8" cy="21" r="1" />
-                        <circle cx="19" cy="21" r="1" />
-                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.38a2 2 0 0 0 1.84-1.9L21.7 6H5.16" />
-                    </svg>
-                    <span class="text-xs mt-1">PV Venta</span>
-                </button>
-            </div>
-        </footer>
+            <!-- 5. PV Venta (PV venta / Carrito de compras - activa por defecto) -->
+            <button class="btn-action active" data-view="cart" data-action="change-view">
+                <img src="icons/PRINCIPALES 2.svg" width="24" height="24" alt="PV Venta">
+                <span class="text-xs mt-1">PV Venta</span>
+            </button>
+    </div>
+    </footer>
 
     </div>
 
@@ -163,6 +116,12 @@
     <script>
         // Este script escucha los clics en la barra inferior (Footer)
         document.addEventListener('DOMContentLoaded', () => {
+            // Manejar URL con hash (ej: index.html#cart)
+            const hash = window.location.hash.substring(1);
+            if (hash && window.changeView) {
+                setTimeout(() => window.changeView(hash), 100);
+            }
+            
             const bottomBar = document.getElementById('bottom-bar');
             if (bottomBar) {
                 bottomBar.addEventListener('click', (event) => {
